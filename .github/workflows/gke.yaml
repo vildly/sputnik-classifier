@@ -1,58 +1,59 @@
-name: Build and Deploy to GKE
+  name: Build and Deploy to GKE
 
-on:
-  push:
-    branches:
-      - main
+  on:
+    workflow_dispatch:
+    # push:
+    #   branches:
+    #     - main
 
-env:
-  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-  GKE_CLUSTER: northstar-k8s  # cluster name
-  GKE_ZONE: europe-north1      # cluster zone
-  IMAGE: gopp                 # image name
-  IMAGE_TAG: latest           # image tag
-  GAR_LOCATION: europe-north1  # Artifact Registry location (regional)
-  GAR_REPOSITORY: northstar-repo # Artifact Registry repository
+  env:
+    PROJECT_ID: ${{ secrets.GKE_PROJECT }}
+    GKE_CLUSTER: northstar-k8s  # cluster name
+    GKE_ZONE: europe-north1      # cluster zone
+    IMAGE: gopp                 # image name
+    IMAGE_TAG: latest           # image tag
+    GAR_LOCATION: europe-north1  # Artifact Registry location (regional)
+    GAR_REPOSITORY: northstar-repo # Artifact Registry repository
 
-jobs:
-  setup-build-publish-deploy:
-    name: Setup, Build, Publish, and Deploy
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: read
-      id-token: write # Needed for workload identity federation
+  jobs:
+    setup-build-publish-deploy:
+      name: Setup, Build, Publish, and Deploy
+      runs-on: ubuntu-latest
+      environment: production
+      permissions:
+        contents: read
+        id-token: write # Needed for workload identity federation
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v3
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          service_account_key: ${{ secrets.GKE_SA_KEY }}  # Or use workload identity federation
+        - name: Set up Cloud SDK
+          uses: google-github-actions/setup-gcloud@v1
+          with:
+            service_account_key: ${{ secrets.GKE_SA_KEY }}  # Or use workload identity federation
 
-      - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
+        - name: Configure Docker for Artifact Registry
+          run: |
+            gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
 
-      - name: Build and push Docker image
-        run: |
-          docker build \
-            --tag "$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPOSITORY/$IMAGE:$IMAGE_TAG" \
-            --build-arg GITHUB_SHA="$GITHUB_SHA" \
-            --build-arg GITHUB_REF="$GITHUB_REF" \
-            .
-          docker push "$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPOSITORY/$IMAGE:$IMAGE_TAG"
+        - name: Build and push Docker image
+          run: |
+            docker build \
+              --tag "$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPOSITORY/$IMAGE:$IMAGE_TAG" \
+              --build-arg GITHUB_SHA="$GITHUB_SHA" \
+              --build-arg GITHUB_REF="$GITHUB_REF" \
+              .
+            docker push "$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPOSITORY/$IMAGE:$IMAGE_TAG"
 
-      - name: Set up GKE context
-        uses: google-github-actions/get-gke-credentials@v1
-        with:
-          cluster_name: ${{ env.GKE_CLUSTER }}
-          location: ${{ env.GKE_ZONE }}
+        - name: Set up GKE context
+          uses: google-github-actions/get-gke-credentials@v1
+          with:
+            cluster_name: ${{ env.GKE_CLUSTER }}
+            location: ${{ env.GKE_ZONE }}
 
-      - name: Deploy to GKE
-        run: |
-          kubectl apply -f deploy.yml
-          kubectl rollout status deployment/$DEPLOYMENT_NAME # Replace $DEPLOYMENT_NAME
-          kubectl get pods
+        - name: Deploy to GKE
+          run: |
+            kubectl apply -f deploy.yml
+            kubectl rollout status deployment/$DEPLOYMENT_NAME # Replace $DEPLOYMENT_NAME
+            kubectl get pods
