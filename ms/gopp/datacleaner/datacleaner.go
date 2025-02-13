@@ -1,4 +1,3 @@
-// datacleaner/datacleaner.go
 package datacleaner
 
 import (
@@ -8,18 +7,10 @@ import (
 	"strings"
 )
 
-// contains checks whether a given string exists in a slice.
-func contains(slice []string, item string) bool {
-	for _, elem := range slice {
-		if elem == item {
-			return true
-		}
-	}
-	return false
-}
-
-// CleanFiltered recursively cleans input data,
-// trimming strings and for maps, retaining only allowed keys.
+// CleanFiltered recursively processes input data using the allowed keys.
+// - For strings, it returns the trimmed string.
+// - For arrays, it processes each element recursively.
+// - For maps, it concatenates the cleaned values of allowed keys into one string.
 func CleanFiltered(input interface{}, allowedKeys []string) interface{} {
 	switch value := input.(type) {
 	case string:
@@ -30,56 +21,54 @@ func CleanFiltered(input interface{}, allowedKeys []string) interface{} {
 		}
 		return value
 	case map[string]interface{}:
-		newMap := make(map[string]interface{})
-		for key, val := range value {
-			if contains(allowedKeys, key) {
-				newMap[key] = CleanFiltered(val, allowedKeys)
+		var tokens []string
+		for _, key := range allowedKeys {
+			if val, exists := value[key]; exists {
+				cleaned := CleanFiltered(val, allowedKeys)
+				// Convert the value to a string.
+				token := fmt.Sprintf("%v", cleaned)
+				if token != "" {
+					tokens = append(tokens, token)
+				}
 			}
 		}
-		return newMap
+		// Concatenate all token strings together.
+		return strings.TrimSpace(strings.Join(tokens, " "))
 	default:
 		return value
 	}
 }
 
-// unmarshalJSON decodes raw JSON bytes into a generic interface.
-// It only accepts a top-level JSON array; otherwise, an error is returned.
-func unmarshalJSON(raw []byte) (interface{}, error) {
-	var data interface{}
-	if err := json.Unmarshal(raw, &data); err != nil {
-		return nil, fmt.Errorf(
-			"invalid JSON format: only a JSON array is allowed ([ {\"key\": \"value\"}, ... ]) | underlying error: %w",
-			err,
-		)
-	}
-
-	arr, ok := data.([]interface{})
-	if !ok {
-		return nil, errors.New(
-			"invalid JSON format: only a JSON array is allowed ([ {\"key\": \"value\"}, ... ])",
-		)
+// unmarshalJSONArray decodes raw JSON bytes directly into a []interface{}.
+// It returns an error if the provided raw JSON is not a valid array.
+func unmarshalJSONArray(raw []byte) ([]interface{}, error) {
+	var arr []interface{}
+	if err := json.Unmarshal(raw, &arr); err != nil {
+		return nil, fmt.Errorf("invalid JSON array: expected format [ {\"key\": \"value\"}, ... ] | underlying error: %w", err)
 	}
 	return arr, nil
 }
 
-// marshalJSON encodes data back into JSON bytes.
+// marshalJSON encodes the data back into JSON bytes.
 func marshalJSON(data interface{}) ([]byte, error) {
 	return json.Marshal(data)
 }
 
-// CleanJSONFiltered accepts raw JSON bytes and a slice of allowed keys,
-// cleans the data, and returns filtered JSON or an error.
-// It returns an error if no keys are provided.
+// CleanJSONFiltered accepts raw JSON bytes and a slice of allowed keys.
+// It processes each object in the top-level JSON array by concatenating values
+// corresponding to the allowed keys into a single string. If no allowed keys are provided,
+// it returns an error.
 func CleanJSONFiltered(rawJSON []byte, allowedKeys []string) ([]byte, error) {
 	if len(allowedKeys) == 0 {
 		return nil, errors.New("error: keys parameter is required")
 	}
 
-	data, err := unmarshalJSON(rawJSON)
+	arr, err := unmarshalJSONArray(rawJSON)
 	if err != nil {
 		return nil, err
 	}
 
-	cleanedData := CleanFiltered(data, allowedKeys)
+	// Process each element of the array.
+	cleanedData := CleanFiltered(arr, allowedKeys)
 	return marshalJSON(cleanedData)
 }
