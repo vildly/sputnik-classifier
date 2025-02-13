@@ -1,14 +1,14 @@
-// datacleaner.go
-// Package datacleaner provides functions to clean input data from JSON.
-// In addition to trimming whitespace, this version also keeps only specified keys.
+// datacleaner/datacleaner.go
+// Package datacleaner provides functions to clean and filter JSON data.
 package datacleaner
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 )
 
-// contains checks whether a given string is in a slice.
+// contains checks whether a given string exists in a slice.
 func contains(slice []string, item string) bool {
 	for _, elem := range slice {
 		if elem == item {
@@ -18,47 +18,59 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-// CleanFiltered recursively cleans an input data structure.
-// It trims whitespace from strings and, when encountering a map,
-// only keeps the keys specified in keysToKeep. If a slice is encountered,
-// each element is cleaned recursively.
-func CleanFiltered(input interface{}, keysToKeep []string) interface{} {
-	switch v := input.(type) {
+// CleanFiltered recursively cleans input data.
+// It trims strings and, when encountering maps,
+// only retains the keys specified in allowedKeys.
+func CleanFiltered(input interface{}, allowedKeys []string) interface{} {
+	switch value := input.(type) {
 	case string:
-		// Clean string: trim whitespace.
-		return strings.TrimSpace(v)
+		return strings.TrimSpace(value)
 	case []interface{}:
-		// Recursively clean each element in a slice.
-		for i, elem := range v {
-			v[i] = CleanFiltered(elem, keysToKeep)
+		for i, elem := range value {
+			value[i] = CleanFiltered(elem, allowedKeys)
 		}
-		return v
+		return value
 	case map[string]interface{}:
-		// Create a new map and copy only keys that are in keysToKeep.
 		newMap := make(map[string]interface{})
-		for key, val := range v {
-			if contains(keysToKeep, key) {
-				newMap[key] = CleanFiltered(val, keysToKeep)
+		for key, val := range value {
+			if contains(allowedKeys, key) {
+				newMap[key] = CleanFiltered(val, allowedKeys)
 			}
 		}
 		return newMap
 	default:
-		// For all other types, return the value as is.
-		return v
+		return value
 	}
 }
 
-// CleanJSONFiltered accepts a raw JSON byte slice, cleans it using CleanFiltered,
-// and returns the cleaned JSON. The keysToKeep parameter directs which keys to retain.
-func CleanJSONFiltered(rawJSON []byte, keysToKeep []string) ([]byte, error) {
-	// Unmarshal the JSON into a generic data structure.
+// unmarshalJSON is a helper to decode JSON into a generic interface.
+func unmarshalJSON(raw []byte) (interface{}, error) {
 	var data interface{}
-	if err := json.Unmarshal(rawJSON, &data); err != nil {
+	err := json.Unmarshal(raw, &data)
+	if err != nil {
 		return nil, err
 	}
-	// Clean and filter the data recursively.
-	cleanedData := CleanFiltered(data, keysToKeep)
-	// Marshal the cleaned data back to JSON.
-	return json.Marshal(cleanedData)
+	return data, nil
+}
+
+// marshalJSON is a helper to encode data back into JSON.
+func marshalJSON(data interface{}) ([]byte, error) {
+	return json.Marshal(data)
+}
+
+// CleanJSONFiltered accepts raw JSON bytes and a slice of allowed keys.
+// It returns filtered and cleaned JSON or an error if no keys are provided.
+func CleanJSONFiltered(rawJSON []byte, allowedKeys []string) ([]byte, error) {
+	if len(allowedKeys) == 0 {
+		return nil, errors.New("error: keys parameter is required")
+	}
+
+	data, err := unmarshalJSON(rawJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	cleanedData := CleanFiltered(data, allowedKeys)
+	return marshalJSON(cleanedData)
 }
 
