@@ -1,0 +1,11 @@
+# Folders
+**/*logs/
+**/*venv/
+**/*__pycache__/
+
+# Files
+**/*.lock
+**/*.env
+**/*.log
+**/*.pdm-python
+**/*.python-version
