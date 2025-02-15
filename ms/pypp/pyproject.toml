@@ -1,7 +1,7 @@
 [project]
 name = "pypp"
 version = "0.1.0"
-description = "Default template for PDM package"
+description = "Python pre-processor"
 authors = [
     {name = "Samuel Svensson", email = "ss225ze@student.lnu.se"},
     {name = "Andreas Nilsson", email = "an224qi@student.lnu.se"},
