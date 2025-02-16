@@ -1,10 +1,12 @@
+from typing import Dict, List
+
 import json
 
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
 
-def load_json(file_path) -> dict:
+def _load_json(file_path) -> dict:
     """
     Loads the JSON data from the given file path and returns it as a dictionary.
     """
@@ -13,7 +15,7 @@ def load_json(file_path) -> dict:
         return json.load(infile)
 
 
-def write_json(data, file_path) -> None:
+def _write_json(data, file_path) -> None:
     """
     Writes the data to the given file path. The data is written as a JSON.
     """
@@ -23,7 +25,7 @@ def write_json(data, file_path) -> None:
     print(f"Wrote to {file_path}")
 
 
-def remove_stop_words(text: str, spacer: str = "", language: str = "english") -> str:
+def _remove_stop_words(text: str, spacer: str = "", language: str = "english") -> str:
     """
     Removes stop words from the given text. The text is tokenized and the
     stop words are removed. The text is then joined back together with the
@@ -39,47 +41,54 @@ def remove_stop_words(text: str, spacer: str = "", language: str = "english") ->
     return spacer.join([w for w in tokens if w.lower() not in stop_words])
 
 
-def filter_data(in_file_path: str, out_file_path: str, language: str = "english") -> None:
+def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language: str = "english") -> None:
     """
-    Use this script to clean data from a JSON file. The input file should
-    contain a list of objects, each with a "title" and "description" key.
-    The output file will contain a list of objects with only the "title" and
-    "description" keys.
+    Use this script to clean (pre-process) data from a JSON file.
+    The output file will contain a list of objects with only the keys provided.
     """
-    data = load_json(in_file_path)
+    if not len(in_file_path):
+        raise Exception("Input file path missing")
+    if not len(out_file_path):
+        raise Exception("Output file path missing")
+    if not len(keys):
+        raise Exception("No keys provided")
+    data = _load_json(in_file_path)
 
     # Create a new list with only the title and description for each element
     # Get the set of English stop words
-    filtered = []
+    filt_data: List[Dict[str, str]] = []
 
-    for item in data:
-        # Using .get() so that if the key is missing, it defaults to an empty
-        # string
-        title = item.get("title") or ""
-        description = item.get("description") or ""
+    for data_obj in data:
+        filt_data_obj: Dict[str, str] = {}
+        for key in keys:
+            # Using .get() so that if the key is missing, it defaults to None
+            cur_obj = data_obj.get(key) or None
+            if cur_obj is None:
+                continue
+            # Check if the current item is empty
+            if not len(cur_obj):
+                continue
 
-        # Convert to lowercase
-        title = title.lower()
-        description = description.lower()
+            cur_obj = cur_obj.lower()
 
-        # Remove stop words
-        title = remove_stop_words(
-            text=title,
-            spacer=" ",
-            language=language
-        )
-        description = remove_stop_words(
-            text=description,
-            spacer=" ",
-            language=language
-        )
+            cur_obj = _remove_stop_words(
+                text=cur_obj,
+                spacer=" ",
+                language=language
+            )
 
-        # TODO: Concatenate all keys to one key to reduce tokens?
-        # TODO: Filter out empty strings?
+            # TODO: Concatenate all keys to one key to reduce tokens?
+            # TODO: Filter out empty strings?
+            
+            # If the pre-processing has removed all content then
+            # simply continue and skip adding the object to the list
+            if not len(cur_obj):
+                continue
 
-        filtered.append({
-            "title": title,
-            "description": description
-        })
+            # Assign the new object the filtered key
+            filt_data_obj[key] = cur_obj
 
-    write_json(filtered, out_file_path)
+        # Finally append the filtered data object to the new list
+        filt_data.append(filt_data_obj)
+
+    _write_json(filt_data, out_file_path)
