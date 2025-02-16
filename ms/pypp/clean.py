@@ -1,9 +1,9 @@
-from typing import Dict, List
+from typing import List
 
 import json
 
 from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import RegexpTokenizer, word_tokenize
 
 
 def _load_json(file_path) -> dict:
@@ -41,6 +41,13 @@ def _remove_stop_words(text: str, spacer: str = "", language: str = "english") -
     return spacer.join([w for w in tokens if w.lower() not in stop_words])
 
 
+def _remove_symbols(text: str, spacer: str = "") -> str:
+    # Match word characters (letters, digits and underscores)
+    tokenizer = RegexpTokenizer(r'\w+')
+    tokens = tokenizer.tokenize(text)
+    return spacer.join(tokens)
+
+
 def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language: str = "english") -> None:
     """
     Use this script to clean (pre-process) data from a JSON file.
@@ -71,14 +78,16 @@ def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language
 
             cur_obj = cur_obj.lower()
 
+            cur_obj = _remove_symbols(
+                text=cur_obj,
+                spacer=" ",
+            )
+
             cur_obj = _remove_stop_words(
                 text=cur_obj,
                 spacer=" ",
                 language=language
-            )
-
-            # TODO: Concatenate all keys to one key to reduce tokens?
-            # TODO: Filter out empty strings?
+            ) 
             
             # If the pre-processing has removed all content then
             # simply continue and skip adding the object to the list
