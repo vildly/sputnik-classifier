@@ -32,7 +32,6 @@ if __name__ == "__main__":
     
     get_dependencies() 
 
-    # Specify your input and output file names
     input_file = args.i 
     output_file = args.o
     keys = args.keys
