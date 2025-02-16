@@ -56,10 +56,10 @@ def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language
 
     # Create a new list with only the title and description for each element
     # Get the set of English stop words
-    filt_data: List[Dict[str, str]] = []
+    filt_data: List[str] = []
 
     for data_obj in data:
-        filt_data_obj: Dict[str, str] = {}
+        temp: List[str] = []
         for key in keys:
             # Using .get() so that if the key is missing, it defaults to None
             cur_obj = data_obj.get(key) or None
@@ -86,9 +86,12 @@ def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language
                 continue
 
             # Assign the new object the filtered key
-            filt_data_obj[key] = cur_obj
+            temp.append(cur_obj)
 
-        # Finally append the filtered data object to the new list
-        filt_data.append(filt_data_obj)
+        # If we have at least one key with valid content, combine the parts.
+        if temp:
+            # Join the parts with a space and append to the new list.
+            combined = " ".join(temp)
+            filt_data.append(combined)
 
     _write_json(filt_data, out_file_path)
