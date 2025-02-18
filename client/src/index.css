@@ -1,0 +1,13 @@
+/* VERSION 4 */
+@import "tailwindcss";
+
+@theme {
+    /* https://tailwindcss.com/docs/box-shadow */
+    /* shadow-(<custom-property>) | box-shadow: var(<custom-property>); */
+    --shadow-border-red: 0 0 15px 10px rgba(255, 0, 0, 0.4);
+}
+
+html,
+body {
+    background-color: #222222
+}

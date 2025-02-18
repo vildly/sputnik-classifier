@@ -1,0 +1,4 @@
+# Folders
+**/*.vscode/
+**/*node_modules/
+**/*dist/
