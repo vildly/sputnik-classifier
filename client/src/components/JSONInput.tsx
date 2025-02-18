@@ -1,21 +1,22 @@
 import { useState } from "react"
 import { cn } from "../lib/utils"
 
-interface InputJSONProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-    label?: string
+interface JSONInputProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+    setValue: (value: string) => void
+    value: string
+    label: string
 }
 
-export default function InputJSON({ label = "Label", placeholder = "...", ...props }: InputJSONProps) {
-    const [value, setValue] = useState<string>("")
+export default function JSONInput({ setValue, value, label, ...props }: JSONInputProps) {
     const [error, setError] = useState<string | null>(null)
 
     // Update state as the user types into the textarea
-    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>): void {
         setValue(e.target.value)
     }
 
     // When the textarea loses focus, try to parse and reformat the JSON
-    const handleBlur = (_: React.FocusEvent<HTMLTextAreaElement>) => {
+    function handleBlur(_: React.FocusEvent<HTMLTextAreaElement>): void {
         try {
             const parsed = JSON.parse(value)
             const formatted = JSON.stringify(parsed, null, 2)
@@ -27,25 +28,22 @@ export default function InputJSON({ label = "Label", placeholder = "...", ...pro
     }
 
     return (
-        <div className="flex flex-col items-center p-6 w-full h-screen">
-            <label className="my-1 text-white text-lg">
-                {error
-                ? <span className="my-1 text-red-500 text-lg">{error}</span>
-                : label}
+        <div className="h-full flex flex-col space-y-2">
+            <label className="text-white text-lg">
+                {error ? <span className="text-red-500">{error}</span> : label}
             </label>
             <textarea
                 {...props}
                 value={value}
-                placeholder={placeholder}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 className={cn(
-                    "p-2",
-                    "resize-none [width:80ch] h-full",
-                    "text-white text-md",
+                    "h-full",
+                    "p-2 resize-none",
+                    "text-md text-white",
                     "bg-neutral-900",
-                    error ? "border-red-500" : "border-gray-300",
                     "border-3 rounded-lg",
+                    error ? "border-red-500" : "border-gray-300",
                     "focus:outline-none focus:ring-2 focus:ring-blue-500",
                     "transition"
                 )}
