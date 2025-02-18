@@ -59,7 +59,7 @@ jobs:
           if [ "${{ matrix.service }}" = "gopp" ]; then
             CONTEXT="./ms/gopp"
           elif [ "${{ matrix.service }}" = "rest_api" ]; then
-            CONTEXT="./ms/restfulgo"
+            CONTEXT="./ms/api"
           elif [ "${{ matrix.service }}" = "mongodb" ]; then
             CONTEXT="." # MongoDB official image
           else
