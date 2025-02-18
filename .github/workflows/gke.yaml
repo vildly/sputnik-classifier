@@ -52,7 +52,7 @@ jobs:
       # Build and Push Docker Image
       - name: Build and Push Docker Images
         run: |
-          IMAGE_URI="${GAR_LOCATION}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ matrix.service }}:${{ env.IMAGE_TAG }}"
+          IMAGE_URI="${GAR_LOCATION}-docker.pkg.dev/$PROJECT_ID/$GAR_REPOSITORY/${{ matrix.service }}:$IMAGE_TAG"
           echo "Building image for service: ${{ matrix.service }}"
 
           # Define context path based on service
