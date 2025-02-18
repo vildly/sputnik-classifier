@@ -4,9 +4,9 @@ name: Build and Push Multiple Docker Images
 on:
   workflow_dispatch:
   # Uncomment to trigger the workflow automatically on pushes to the main branch
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
