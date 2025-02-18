@@ -1,5 +1,3 @@
-from typing import List
-
 import argparse
 import os
 import nltk
@@ -38,7 +36,7 @@ if __name__ == "__main__":
 
     # Ensures that the output directory exists
     output_dir = os.path.dirname(output_file)
-    if not os.path.exists(output_dir):
+    if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     filter_data(

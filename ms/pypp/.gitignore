@@ -1,6 +1,7 @@
 # Folders
 **/*logs/
 **/*venv/
+**/*data/
 **/*__pycache__/
 
 # Files
