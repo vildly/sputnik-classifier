@@ -1,17 +1,13 @@
+
 name: Build and Push Multiple Docker Images
 
-on:
-  workflow_dispatch:
-  # Uncomment to trigger the workflow automatically on pushes to the main branch
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 
 env:
-  PROJECT_ID: ${{ secrets.GKE_PROJECT }}         # Google Cloud project ID
-  GAR_LOCATION: europe-north1                    # Artifact Registry location (regional)
-  GAR_REPOSITORY: northstar-repo                 # Artifact Registry repository name
-  IMAGE_TAG: latest                              # Image tag
+  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
+  GAR_LOCATION: europe-north1
+  GAR_REPOSITORY: northstar-repo
+  IMAGE_TAG: latest
 
 jobs:
   build_and_push:
@@ -19,50 +15,63 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service:                                 # Define services to build in parallel
+        service:
           - gopp
           - rest_api
           - mongodb
     steps:
+      # Checkout the repository with submodules if needed
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
+      # Debug to list directory structure
+      - name: Debug Directory Structure
+        run: |
+          echo "Listing directory structure..."
+          ls -R
+
+      # Set up Google Cloud SDK
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           service_account_key: ${{ secrets.GKE_SA_KEY }}
           project_id: ${{ secrets.GKE_PROJECT }}
 
-      - name: Configure Docker Authentication for Artifact Registry
+      # Configure Docker authentication for Artifact Registry
+      - name: Configure Docker Authentication
         run: |
           gcloud auth configure-docker ${GAR_LOCATION}-docker.pkg.dev
 
-      - name: Build and Push Docker Image
+      # Build and Push Docker Image
+      - name: Build and Push Docker Images
         run: |
           IMAGE_URI="${GAR_LOCATION}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ matrix.service }}:${{ env.IMAGE_TAG }}"
           echo "Building image for service: ${{ matrix.service }}"
 
-          # Define the build context based on the service
+          # Define context path based on service
           if [ "${{ matrix.service }}" = "gopp" ]; then
             CONTEXT="./ms/gopp"
           elif [ "${{ matrix.service }}" = "rest_api" ]; then
             CONTEXT="./ms/restfulgo"
           elif [ "${{ matrix.service }}" = "mongodb" ]; then
-            CONTEXT="./" # MongoDB uses its official image; no custom Dockerfile required
+            CONTEXT="." # MongoDB official image
+          else
+            echo "Unknown service: ${{ matrix.service }}"
+            exit 1
           fi
 
+          echo "Using build context: ${CONTEXT}"
+
           if [ "${{ matrix.service }}" = "mongodb" ]; then
-            # Mongodb direct pull and push
-            echo "Pulling MongoDB 8.0 image..."
+            echo "Pulling and tagging MongoDB image..."
             docker pull mongo:8.0
-            echo "Tagging MongoDB image for Artifact Registry..."
             docker tag mongo:8.0 "${IMAGE_URI}"
           else
-            # Build custom images for gopp and rest_api
-            echo "Building Docker image..."
+            echo "Building Docker image ${IMAGE_URI}..."
             docker build --tag "${IMAGE_URI}" "${CONTEXT}"
           fi
 
-          # Push the image to Artifact Registry
-          echo "Pushing the image ${IMAGE_URI} to Artifact Registry..."
+          echo "Pushing image ${IMAGE_URI} to Artifact Registry..."
           docker push "${IMAGE_URI}"
