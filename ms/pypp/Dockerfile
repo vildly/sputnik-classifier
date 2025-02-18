@@ -12,6 +12,8 @@ RUN pip install -U pdm
 # Disable update check for PDM to avoid unnecessary network calls
 ENV PDM_CHECK_UPDATE=false
 
+# Not sure why the README.md file is required here,
+# but think it has something to do with the pdm install cmd?
 # Copy project files needed for dependency installation
 COPY pyproject.toml pdm.lock README.md /app/
 
