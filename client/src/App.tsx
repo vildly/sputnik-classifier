@@ -1,9 +1,9 @@
-import InputBox from "./components/InputBox"
+import InputJSON from "./components/InputJSON"
 
  export default function App() {
     return (
         <div className="flex justify-center">
-            <InputBox />
+            <InputJSON label="Feed me some JSON data..." />
         </div>
     )
 }
