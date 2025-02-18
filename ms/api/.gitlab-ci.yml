@@ -1,0 +1,82 @@
+.before_script_ssh_setup: &before_script_ssh_setup
+  # Ensure ssh-agent is installed and started, essential for managing SSH keys.
+  # (Change apt-get to yum if using an RPM-based image)
+  - command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )
+
+  # Start the ssh-agent in the background.
+  - eval $(ssh-agent -s)
+
+  # Add the SSH private key stored in the SSH_PRIVATE_KEY variable to the ssh-agent.
+  # Using 'tr' to remove carriage return characters for compatibility with ed25519 keys.
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+
+  # Create the .ssh directory and set the correct permissions.
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+
+  # Use ssh-keyscan to add the remote server's SSH key to the known_hosts file.
+  - ssh-keyscan -H $REMOTE_HOST >> ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+
+image: docker:27-cli
+
+stages:
+  - build
+  - test
+  - deploy
+
+# Job to deploy to the production environment.
+deploy_production_job:
+  stage: deploy
+  environment:
+    name: production
+    url: http://$REMOTE_HOST
+  variables:
+    REMOTE_HOST: $REMOTE_HOST       # Set the REMOTE_HOST variable for production.
+    DOCKER_HOST: ssh://ubuntu@$REMOTE_HOST  # Docker connection via SSH.
+    API_HOST: "rest_api"
+  before_script: *before_script_ssh_setup  # Reuse SSH setup steps.
+  script:
+    - echo "Deploying to production..."
+    - docker compose -f docker-compose.yaml up --build -d
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'  # Only run on main branch
+
+# Job to build the Docker image using Kaniko
+build-job:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.0-debug
+    entrypoint: [""]  # Override the default entrypoint.
+  script:
+    - echo "Building Docker image with Kaniko for rest_api..."
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${CI_REGISTRY_IMAGE}/rest_api:latest"
+
+test:
+  stage: test
+  image:
+    name: node:20-bullseye
+    entrypoint: [""]
+  services:
+    - name: gitlab.lnu.se:5050/1dv027/content/examples/restfulgo/rest_api:latest
+      alias: rest_api
+    - name: mongo:6
+      alias: db
+  variables:
+    MONGO_INITDB_DATABASE: testdb
+    FF_NETWORK_PER_BUILD: 1
+    MONGODB_URI: "mongodb://db:27017/testdb"
+    API_HOST: "rest_api"
+  before_script:
+    - echo "Updating package lists and installing netcat and curl..."
+    - apt-get update && apt-get install -y netcat curl
+    - echo "Waiting for the REST API container at rest_api:80 to be ready..."
+    - until nc -vz rest_api 80; do sleep 1; done
+    - echo "REST API is ready."
+  script:
+    - echo "Installing Newman..."
+    - npm install -g newman
+    - echo "Running Postman collections with Newman..."
+    - newman run "$POSTMAN_COLLECTION_URL" --environment "$POSTMAN_ENVIRONMENT_URL"
+    - echo "Postman tests completed."
+
