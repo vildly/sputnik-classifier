@@ -27,5 +27,4 @@ go.work.sum
 # private datasets
 **/data/
 
-# binaries
-**/gopp/gopp
+**/*node_modules/
