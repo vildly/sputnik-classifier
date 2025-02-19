@@ -52,7 +52,7 @@ jobs:
     - name: Build
       run: |-
         docker build \
-          -f ./ms/pypp/Dockerfile \
+          -f /ms/pypp/Dockerfile \
           --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG" \
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
