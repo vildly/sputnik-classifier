@@ -1,3 +1,8 @@
+# DevOps Pipeline
+# See:
+# https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#github-context
+# for accessing GitHub default variables!
+
 name: Build and Deploy to GKE
 
 on:
@@ -14,7 +19,7 @@ env:
   # Image name (more may have to be added here)
   IMAGE: pypp                                         
   # image tag based of the "branch.commit-sha"
-  IMAGE_TAG: ${{ github.head_ref || 'default'}}${{ github.sha }} 
+  IMAGE_TAG: ${{ github.ref_name || 'default' }}${{ github.sha }} 
   # artifact registry zone
   GAR_ZONE: europe-north1                             
   # artifact registry repository
@@ -80,9 +85,10 @@ jobs:
     - name: Publish
       run: |-
         docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG"
-
+    
+    # TODO: Fix deploy manifest before uncommenting this!
     # Deploy the Docker image to the GKE cluster
-    - name: Deploy
-      run: |-
-        kubectl apply -f deploy.yaml
-        kubectl get pods
+    # - name: Deploy
+    #   run: |-
+    #     kubectl apply -f deploy.yaml
+    #     kubectl get pods

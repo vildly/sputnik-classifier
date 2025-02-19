@@ -1,6 +1,1 @@
-GKE_CLUSTER: northstar-k8s    # cluster name
-GKE_ZONE: europe-north1   # cluster zone
-IMAGE: pypp # image name
-IMAGE_TAG: test # image tag
-GAR_ZONE: europe-north1 # artifact registry zone
-GAR_REPO: northstar-repo # artifact registry repository
+# TODO: Alot... :)
