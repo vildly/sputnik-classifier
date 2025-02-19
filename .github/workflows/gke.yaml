@@ -27,17 +27,10 @@ jobs:
     steps:
 
     # Setup gcloud CLI 
-    - id: 'auth'
+    - id: Auth
       uses: 'google-github-actions/auth@v2'
       with:
         credentials_json: '${{ secrets.GKE_SA_KEY }}'
-        create_credentials_file: 'true'
-
-    - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Debug Credentials File
-      run: ls -l ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
 
     # Get the GKE credentials so we can deploy to the cluster
     - name: Get GKE Credentials
