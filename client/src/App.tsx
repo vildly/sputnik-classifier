@@ -1,4 +1,5 @@
 import JSONForm from "./components/JSONForm"
+import Loading from "./components/Loading"
 
  export default function App() {
     return (
@@ -11,6 +12,7 @@ import JSONForm from "./components/JSONForm"
                 ..\/_____/...\/_/.....\/_____/.....\/_/...\/_/.\/_/...\/_/...\/_/\/_/.
             </pre>
             <JSONForm />
+            <Loading color="white" size={64}/>
         </div>
     )
 }
