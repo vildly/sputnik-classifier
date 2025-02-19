@@ -1,7 +1,12 @@
 import JSONForm from "./components/JSONForm"
-import Loading from "./components/Loading"
+import Loading, { LoadingColors } from "./components/Loading"
 
  export default function App() {
+
+    // function setPatternColor(text: string, pattern: RegColor, color: string): string {
+    //     return text.matchAll(pattern)
+    // }
+
     return (
         <div className="max-w-[80ch] h-screen mx-auto py-6 flex flex-col items-center">
             <pre className="w-min my-6 font-mono text-neutral-500 text-xs text-center whitespace-pre-wrap break-words">
@@ -12,7 +17,7 @@ import Loading from "./components/Loading"
                 ..\/_____/...\/_/.....\/_____/.....\/_/...\/_/.\/_/...\/_/...\/_/\/_/.
             </pre>
             <JSONForm />
-            <Loading color="white" size={64}/>
+            <Loading color={LoadingColors.BLUE} size={20}/>
         </div>
     )
 }
