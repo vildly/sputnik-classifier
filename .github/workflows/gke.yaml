@@ -35,6 +35,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
+    - name: Debug Credentials File
+      run: ls -l ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+
     # Get the GKE credentials so we can deploy to the cluster
     - name: Get GKE Credentials
       uses: google-github-actions/get-gke-credentials@v2.3.1
