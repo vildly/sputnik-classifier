@@ -7,12 +7,12 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-  GKE_CLUSTER: northstar-k8s    # cluster name
-  GKE_ZONE: europe-north1       # cluster zone
-  IMAGE: pypp                   # image name
-  IMAGE_TAG: test               # image tag
-  GAR_ZONE: europe-north1       # artifact registry zone
-  GAR_REPO: northstar-repo      # artifact registry repository
+  GKE_CLUSTER: northstar-k8s                          # cluster name
+  GKE_ZONE: europe-north1                             # cluster zone
+  IMAGE: pypp                                         # Image name (more may have to be added here)
+  IMAGE_TAG: ${{ github.head_ref }}.${{ github.sha }} # image tag based of the "branch.commit-sha"
+  GAR_ZONE: europe-north1                             # artifact registry zone
+  GAR_REPO: northstar-repo                            # artifact registry repository
 
 jobs:
   setup-build-publish-deploy:
@@ -46,14 +46,13 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4.2.2
 
-    - name: Debug Build
-      run: |
-        echo $PROJECT_ID
-
     # Build the Docker image
+    # --tag ...
+    #
     - name: Build
       run: |-
         docker build \
+          -f ./ms/pypp/Dockerfile \
           --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG" \
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
@@ -67,5 +66,5 @@ jobs:
     # Deploy the Docker image to the GKE cluster
     - name: Deploy
       run: |-
-        kubectl apply -f deploy.yml
+        kubectl apply -f deploy.yaml
         kubectl get pods
