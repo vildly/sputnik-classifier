@@ -27,5 +27,8 @@ go.work.sum
 # private datasets
 **/data/
 
-# binaries
-**/gopp/gopp
+# folders
+**/*.vscode/
+**/*.vite/
+**/*node_modules/
+**/*dist/
