@@ -7,12 +7,18 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-  GKE_CLUSTER: northstar-k8s                          # cluster name
-  GKE_ZONE: europe-north1                             # cluster zone
-  IMAGE: pypp                                         # Image name (more may have to be added here)
-  IMAGE_TAG: ${{ github.head_ref }}.${{ github.sha }} # image tag based of the "branch.commit-sha"
-  GAR_ZONE: europe-north1                             # artifact registry zone
-  GAR_REPO: northstar-repo                            # artifact registry repository
+  # cluster name
+  GKE_CLUSTER: northstar-k8s                          
+  # cluster zone
+  GKE_ZONE: europe-north1                             
+  # Image name (more may have to be added here)
+  IMAGE: pypp                                         
+  # image tag based of the "branch.commit-sha"
+  IMAGE_TAG: ${{ github.head_ref || 'default'}}${{ github.sha }} 
+  # artifact registry zone
+  GAR_ZONE: europe-north1                             
+  # artifact registry repository
+  GAR_REPO: northstar-repo                            
 
 jobs:
   setup-build-publish-deploy:
