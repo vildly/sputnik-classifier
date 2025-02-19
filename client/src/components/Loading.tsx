@@ -1,14 +1,7 @@
-export enum LoadingColors {
-    CURRENT = "currentColor",
-    WHITE = "#ffffff",
-    BLUE = "#3b82f6",
-    RED = "#ef4444",
-    GREEN = "#10b981",
-    YELLOW = "#f59e0b",
-}
+import { HexColors } from "../lib/colors"
 
 interface LoadingProps {
-    color: LoadingColors
+    color: HexColors
     size?: number
 }
 
