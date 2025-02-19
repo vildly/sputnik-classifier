@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:a748084ac9ad884c50af386cf35d62cf8cfcfbb3619d7e69aa8585a9f46aab51"
+content_hash = "sha256:52fd46e2280e6a58afa157e9bf1f75a6de7739967f2d6d9275fa9ec5ad23a67a"
 
 [[metadata.targets]]
 requires_python = "==3.13.*"
@@ -46,16 +46,6 @@ groups = ["default"]
 files = [
     {file = "joblib-1.4.2-py3-none-any.whl", hash = "sha256:06d478d5674cbc267e7496a410ee875abd68e4340feff4490bcb7afb88060ae6"},
     {file = "joblib-1.4.2.tar.gz", hash = "sha256:2382c5816b2636fbd20a09e0f4e9dad4736765fdfb7dca582943b9c1366b3f0e"},
-]
-
-[[package]]
-name = "kafka-python"
-version = "2.0.3"
-summary = "Pure Python client for Apache Kafka"
-groups = ["default"]
-files = [
-    {file = "kafka-python-2.0.3.tar.gz", hash = "sha256:9ef48bc21f4ac78d80b9f424e5f0f0cd63a29652f5e5f4369960434806f1bbdd"},
-    {file = "kafka_python-2.0.3-py2.py3-none-any.whl", hash = "sha256:ff28bee2430359256d947cffaf951b95e9c66697b59af28014d5b28e160a6084"},
 ]
 
 [[package]]
