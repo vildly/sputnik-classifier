@@ -19,7 +19,7 @@ env:
   # Image name (more may have to be added here)
   IMAGE: pypp                                         
   # image tag based of the "branch.commit-sha"
-  IMAGE_TAG: ${{ github.ref_name || "default" }}${{ github.sha }} 
+  IMAGE_TAG: ${{ github.ref_name || 'default' }}${{ github.sha }} 
   # artifact registry zone
   GAR_ZONE: europe-north1                             
   # artifact registry repository
