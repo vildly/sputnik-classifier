@@ -43,7 +43,7 @@ export default function JSONInput({ errorCB, setValue, value, label, ...props }:
                 className={cn(
                     "h-full",
                     "p-2 resize-none",
-                    "text-md text-white",
+                    "font-mono text-sm text-white",
                     "bg-neutral-900",
                     "border-3 rounded-lg",
                     error ? "border-red-500" : "border-gray-300",
