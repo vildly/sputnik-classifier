@@ -1,14 +1,17 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { cn } from "../lib/utils"
 
 interface JSONInputProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+    errorCB?: (error: string | null) => void
     setValue: (value: string) => void
     value: string
     label: string
 }
 
-export default function JSONInput({ setValue, value, label, ...props }: JSONInputProps) {
+export default function JSONInput({ errorCB, setValue, value, label, ...props }: JSONInputProps) {
     const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => errorCB && errorCB(error), [error])
 
     // Update state as the user types into the textarea
     function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>): void {
@@ -23,15 +26,13 @@ export default function JSONInput({ setValue, value, label, ...props }: JSONInpu
             setValue(formatted)
             setError(null)
         } catch (err) {
-            setError("Invalid JSON")
+            setError("Incorrect JSON format")
         }
     }
 
     return (
         <div className="h-full flex flex-col space-y-2">
-            <label className="text-white text-lg">
-                {error ? <span className="text-red-500">{error}</span> : label}
-            </label>
+            <label className="text-white text-lg">{label}</label>
             <textarea
                 {...props}
                 value={value}
@@ -45,7 +46,7 @@ export default function JSONInput({ setValue, value, label, ...props }: JSONInpu
                     "border-3 rounded-lg",
                     error ? "border-red-500" : "border-gray-300",
                     "focus:outline-none focus:ring-2 focus:ring-blue-500",
-                    "transition"
+                    "transition duration-300"
                 )}
             />
         </div>
