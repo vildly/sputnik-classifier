@@ -47,6 +47,15 @@ jobs:
         cluster_name: ${{ env.GKE_CLUSTER }}
         location: ${{ env.GKE_ZONE }}
 
+    # GitHub Action to login against a Docker registry
+    # https://github.com/marketplace/actions/docker-login
+    - name: Docker Login
+      uses: docker/login-action@v3.3.0
+      with:
+        registry: ${{ env.GAR_ZONE }}-docker.pkg.dev
+        username: _json_key
+        password: ${{ secrets.GKE_SA_KEY }}
+
     # Required for the "docker build" to work
     # https://github.com/marketplace/actions/checkout
     - name: Checkout
