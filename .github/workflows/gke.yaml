@@ -9,10 +9,10 @@ on:
   push:
     branches:
       - main
-    paths:
+    # paths:
       # Only trigger if changes occur in these files/dir
-      - "ms/pypp/**/*.py" 
-      - "**/Dockerfile"
+      # - "ms/pypp/**/*.py" 
+      # - "**/Dockerfile"
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
@@ -23,7 +23,8 @@ env:
   # Image name (more may have to be added here)
   IMAGE: pypp                                         
   # image tag based of the "branch.commit-sha"
-  IMAGE_TAG: ${{ github.ref_name || 'default' }}${{ github.sha }} 
+  # Only a-z, 0-9, _ (underscores), . (periods) and - (hyphens) are allowed.
+  IMAGE_TAG: ${{ github.ref_name || 'default' }}-${{ github.sha }} 
   # artifact registry zone
   GAR_ZONE: europe-north1                             
   # artifact registry repository
