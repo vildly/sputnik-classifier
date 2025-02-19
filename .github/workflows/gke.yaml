@@ -1,82 +1,63 @@
-
-name: Build and Push Multiple Docker Images
+name: Build and Deploy to GKE
 
 on:
-  workflow_dispatch:
-  # Uncomment to trigger the workflow automatically on pushes to the main branch
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-  GAR_LOCATION: europe-north1
-  GAR_REPOSITORY: northstar-repo
-  IMAGE_TAG: latest
+  GKE_CLUSTER: northstar-k8s    # cluster name
+  GKE_ZONE: europe-north1   # cluster zone
+  IMAGE: pypp # image name
+  IMAGE_TAG: test # image tag
+  GAR_ZONE: europe-north1 # artifact registry zone
+  GAR_REPO: northstar-repo # artifact registry repository
 
 jobs:
-  build_and_push:
-    name: Build and Push Multiple Docker Images
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish, and Deploy
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service:
-          # - gopp
-          - rest_api
-          - mongodb
+    environment: production
+
     steps:
-      # Checkout the repository with submodules if needed
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+    - name: Checkout
+      uses: actions/checkout@v3
 
-      # Debug to list directory structure
-      - name: Debug Directory Structure
-        run: |
-          echo "Listing directory structure..."
-          ls -R
+    # Setup gcloud CLI
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v0'
+      with:
+        credentials_json: '${{ secrets.GKE_SA_KEY }}'
 
-      # Set up Google Cloud SDK
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          service_account_key: ${{ secrets.GKE_SA_KEY }}
-          project_id: ${{ secrets.GKE_PROJECT }}
+    # Configure Docker to use the gcloud command-line tool as a credential
+    # helper for authentication
+    - name: Docker configuration
+      run: |-
+        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://$GAR_ZONE-docker.pkg.dev
 
-      # Configure Docker authentication for Artifact Registry
-      - name: Configure Docker Authentication
-        run: |
-          gcloud auth configure-docker ${GAR_LOCATION}-docker.pkg.dev
+    # Get the GKE credentials so we can deploy to the cluster
+    - name: Set up GKE credentials
+      uses: google-github-actions/get-gke-credentials@v0
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
 
-      # Build and Push Docker Image
-      - name: Build and Push Docker Images
-        run: |
-          IMAGE_URI="${GAR_LOCATION}-docker.pkg.dev/$PROJECT_ID/$GAR_REPOSITORY/${{ matrix.service }}:$IMAGE_TAG"
-          echo "Building image for service: ${{ matrix.service }}"
+    # Build the Docker image
+    - name: Build
+      run: |-
+        docker build \
+          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG" \
+          --build-arg GITHUB_SHA="$GITHUB_SHA" \
+          --build-arg GITHUB_REF="$GITHUB_REF" \
+          .
+    # Push the Docker image to Google Container Registry
+    - name: Publish
+      run: |-
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG"
 
-          # Define context path based on service
-          if [ "${{ matrix.service }}" = "gopp" ]; then
-            CONTEXT="./ms/gopp"
-          elif [ "${{ matrix.service }}" = "rest_api" ]; then
-            CONTEXT="./ms/api"
-          elif [ "${{ matrix.service }}" = "mongodb" ]; then
-            CONTEXT="." # MongoDB official image
-          else
-            echo "Unknown service: ${{ matrix.service }}"
-            exit 1
-          fi
-
-          echo "Using build context: ${CONTEXT}"
-
-          if [ "${{ matrix.service }}" = "mongodb" ]; then
-            echo "Pulling and tagging MongoDB image..."
-            docker pull mongo:8.0
-            docker tag mongo:8.0 "${IMAGE_URI}"
-          else
-            echo "Building Docker image ${IMAGE_URI}..."
-            docker build --tag "${IMAGE_URI}" "${CONTEXT}"
-          fi
-
-          echo "Pushing image ${IMAGE_URI} to Artifact Registry..."
-          docker push "${IMAGE_URI}"
+    # Deploy the Docker image to the GKE cluster
+    - name: Deploy
+      run: |-
+        kubectl apply -f deploy.yml
+        kubectl get pods

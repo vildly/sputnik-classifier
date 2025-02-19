@@ -1,0 +1,6 @@
+GKE_CLUSTER: autopilot-cluster-1    # cluster name
+GKE_ZONE: europe-central2   # cluster zone
+IMAGE: micro # image name
+IMAGE_TAG: test # image tag
+GAR_ZONE: europe-central2 # artifact registry zone
+GAR_REPO: obiwan # artifact registry repository
