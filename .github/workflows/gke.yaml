@@ -3,7 +3,7 @@
 # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#github-context
 # for accessing GitHub default variables!
 
-name: Build and Deploy to GKE
+name: GKE pipeline
 
 on:
   push:
@@ -19,21 +19,21 @@ env:
   # Image name (more may have to be added here)
   IMAGE: pypp                                         
   # image tag based of the "branch.commit-sha"
-  IMAGE_TAG: ${{ github.ref_name || 'default' }}${{ github.sha }} 
+  IMAGE_TAG: ${{ github.ref_name || "default" }}${{ github.sha }} 
   # artifact registry zone
   GAR_ZONE: europe-north1                             
   # artifact registry repository
   GAR_REPO: northstar-repo                            
 
 jobs:
-  setup-build-publish-deploy:
-    name: Setup, Build, Publish, and Deploy
+  main:
+    name: main
     runs-on: ubuntu-latest
     environment: production
     # May be needed for "get-gke-credentials" to work:
     permissions:
-      contents: 'read'
-      id-token: 'write'
+      contents: "read"
+      id-token: "write"
 
     steps:
 
@@ -42,7 +42,7 @@ jobs:
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2.1.8
       with:
-        credentials_json: '${{ secrets.GKE_SA_KEY }}'
+        credentials_json: ${{ secrets.GKE_SA_KEY }}
 
     # Get the GKE credentials so we can deploy to the cluster
     # https://github.com/marketplace/actions/get-gke-credentials
