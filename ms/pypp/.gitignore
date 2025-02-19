@@ -5,7 +5,6 @@
 **/*__pycache__/
 
 # Files
-**/*.lock
 **/*.env
 **/*.log
 **/*.pdm-python
