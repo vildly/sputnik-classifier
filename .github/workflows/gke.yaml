@@ -8,21 +8,25 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
   GKE_CLUSTER: northstar-k8s    # cluster name
-  GKE_ZONE: europe-north1   # cluster zone
-  IMAGE: pypp # image name
-  IMAGE_TAG: test # image tag
-  GAR_ZONE: europe-north1 # artifact registry zone
-  GAR_REPO: northstar-repo # artifact registry repository
+  GKE_ZONE: europe-north1       # cluster zone
+  IMAGE: pypp                   # image name
+  IMAGE_TAG: test               # image tag
+  GAR_ZONE: europe-north1       # artifact registry zone
+  GAR_REPO: northstar-repo      # artifact registry repository
 
 jobs:
   setup-build-publish-deploy:
     name: Setup, Build, Publish, and Deploy
     runs-on: ubuntu-latest
     environment: production
+    # May be needed for "get-gke-credentials" to work:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
 
     steps:
 
-    # Setup gcloud CLI
+    # Setup gcloud CLI 
     - id: 'auth'
       uses: 'google-github-actions/auth@v2'
       with:
@@ -30,12 +34,6 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v3
-
-    # Configure Docker to use the gcloud command-line tool as a credential
-    # helper for authentication
-    # - name: Docker configuration
-    #  run: |-
-    #    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://$GAR_ZONE-docker.pkg.dev
 
     # Get the GKE credentials so we can deploy to the cluster
     - name: Get GKE Credentials
