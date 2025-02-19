@@ -32,7 +32,9 @@ export default function JSONInput({ errorCB, setValue, value, label, ...props }:
 
     return (
         <div className="h-full flex flex-col space-y-2">
-            <label className="text-white text-lg">{label}</label>
+            <label className="text-white text-lg">
+                {error ? <span className="text-red-500">{error}</span> : label}
+            </label>
             <textarea
                 {...props}
                 value={value}

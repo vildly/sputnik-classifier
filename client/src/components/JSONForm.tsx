@@ -1,4 +1,5 @@
 import { useState } from "react"
+import JSONUploader from "./JSONUploader"
 import JSONInput from "./JSONInput"
 
 export default function JSONForm() {
@@ -33,12 +34,16 @@ export default function JSONForm() {
     return (
         <div className="w-full h-full">
             <form onSubmit={handleSubmit} className="h-full flex flex-col space-y-2">
+                <JSONUploader
+                    errorCB={handleError}
+                    setValue={setValue}
+                    label="Upload JSON file"
+                />
                 <JSONInput
                     errorCB={handleError}
                     setValue={setValue}
                     value={value}
-                    label="JSON"
-                    placeholder="Enter JSON here..."
+                    label="Edit JSON content"
                 />
                 <button
                     type="submit"
