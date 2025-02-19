@@ -30,7 +30,8 @@ jobs:
     - id: 'auth'
       uses: 'google-github-actions/auth@v2'
       with:
-        credentials_json: '${{ secrets.GK_SA_KEY }}'
+        credentials_json: '${{ secrets.GKE_SA_KEY }}'
+        create_credentials_file: 'true'
 
     - name: Checkout
       uses: actions/checkout@v3
