@@ -24,9 +24,11 @@ go.work.sum
 # private datasets
 **/data/
 
-# Client
-**/*node_modules/
+# folders
+**/*.vscode/
 **/*.vite/
+**/*node_modules/
+**/*dist/
 
 # Ignore generated kubeconfig from google-github-actions/get-gke-credentials
 gha-kubeconfig-*
