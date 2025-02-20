@@ -25,11 +25,11 @@ func main() {
 	db := initDB()
 
 	// Create a new repository and service
-	repo := repositories.NewDeviceRepository(db)
-	deviceService := services.NewDeviceService(repo)
+	repo := repositories.NewDataRepository(db)
+	deviceService := services.NewDataService(repo)
 
 	// Inject the service into the handlers
-	handlers.SetDeviceService(deviceService)
+	handlers.SetDataService(deviceService)
 
 	userRepo := repositories.NewUserRepository(db)
 	userService := services.NewUserService(userRepo)
@@ -69,12 +69,12 @@ func main() {
 	apiV1 := r.PathPrefix("/api/v1").Subrouter()
 	apiV1.Use(middleware.JWTMiddleware) // Apply middleware to the group
 
-	apiV1.HandleFunc("/devices", handlers.GetDevicesHandler).Methods(http.MethodGet)
-	apiV1.HandleFunc("/devices/{id}", handlers.GetDeviceHandler).Methods(http.MethodGet)
-	apiV1.HandleFunc("/devices", handlers.CreateDeviceHandler).Methods(http.MethodPost)
-	apiV1.HandleFunc("/devices/{id}", handlers.UpdateDeviceHandler).Methods(http.MethodPut)
-	apiV1.HandleFunc("/devices/{id}", handlers.PatchDeviceHandler).Methods(http.MethodPatch)
-	apiV1.HandleFunc("/devices/{id}", handlers.DeleteDeviceHandler).Methods(http.MethodDelete)
+	apiV1.HandleFunc("/data", handlers.GetDataHandler).Methods(http.MethodGet)
+	apiV1.HandleFunc("/data/{id}", handlers.GetDataByIDHandler).Methods(http.MethodGet)
+	apiV1.HandleFunc("/data", handlers.CreateDataHandler).Methods(http.MethodPost)
+	apiV1.HandleFunc("/data/{id}", handlers.UpdateDataHandler).Methods(http.MethodPut)
+	apiV1.HandleFunc("/data/{id}", handlers.PatchDataHandler).Methods(http.MethodPatch)
+	apiV1.HandleFunc("/data/{id}", handlers.DeleteDataHandler).Methods(http.MethodDelete)
 
 	// Swagger documentation (using relative URL)
 	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(

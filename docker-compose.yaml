@@ -3,7 +3,7 @@ version: '3.8'
 services:
   rest_api:
     build: 
-      context: ./ms/restfulgo
+      context: ./ms/api/
       dockerfile: Dockerfile
     ports:
       - "80:80"
