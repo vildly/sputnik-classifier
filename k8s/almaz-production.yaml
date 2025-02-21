@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: rest-api
-        image: your-docker-repo/rest-api:latest
+        image: europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/pypp:main-a7756a7b992ec3a8732566e4ade49109aca21054
         ports:
         - containerPort: 5000
         # env:

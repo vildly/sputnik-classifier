@@ -11,24 +11,22 @@ on:
       - main
     paths:
       # Only trigger if changes occur in these files/dir
-      - "ms/pypp/**/*.py" 
+      - "ms/pypp/**/*.py"
       - "**/Dockerfile"
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
   # cluster name
-  GKE_CLUSTER: northstar-k8s                          
+  GKE_CLUSTER: northstar-k8s
   # cluster zone
-  GKE_ZONE: europe-north1                             
-  # Image name (more may have to be added here)
-  IMAGE: pypp                                         
+  GKE_ZONE: europe-north1
   # image tag based of the "branch.commit-sha"
   # Only a-z, 0-9, _ (underscores), . (periods) and - (hyphens) are allowed.
-  IMAGE_TAG: ${{ github.ref_name || 'default' }}-${{ github.sha }} 
+  IMAGE_TAG: ${{ github.ref_name || 'default' }}-${{ github.sha }}
   # artifact registry zone
-  GAR_ZONE: europe-north1                             
+  GAR_ZONE: europe-north1
   # artifact registry repository
-  GAR_REPO: northstar-repo                            
+  GAR_REPO: northstar-repo
 
 jobs:
   main:
@@ -42,7 +40,7 @@ jobs:
 
     steps:
 
-    # Setup gcloud CLI 
+    # Setup gcloud CLI
     # https://github.com/marketplace/actions/authenticate-to-google-cloud
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2.1.8
@@ -77,23 +75,36 @@ jobs:
     # ...
     # dir/nextdir -> defines where the build output will be put
     #                (using the same as the Dockerfile is required if it contains multi-build steps)
-    - name: Build
+    - name: Build Pypp
       run: |-
         docker build \
           -f ms/pypp/Dockerfile \
-          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG" \
+          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG" \
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
           ms/pypp/
 
+    - name: Publish
+      run: |-
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG"
+
+    - name: Build Almaz
+      run: |-
+        docker build \
+          -f ms/api/Dockerfile \
+          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG" \
+          --build-arg GITHUB_SHA="$GITHUB_SHA" \
+          --build-arg GITHUB_REF="$GITHUB_REF" \
+          ms/api/
+
     # Push the Docker image to Google Container Registry
     - name: Publish
       run: |-
-        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG"
-    
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG"
+
     # TODO: Fix deploy manifest before uncommenting this!
     # Deploy the Docker image to the GKE cluster
-    # - name: Deploy
-    #   run: |-
-    #     kubectl apply -f deploy.yaml
-    #     kubectl get pods
+    - name: Deploy
+      run: |-
+        kubectl apply -f k8s/mongodb-production.yaml
+        kubectl get pods
