@@ -11,6 +11,8 @@ on:
       - main
     paths:
       # Only trigger if changes occur in these files/dir
+      - ".github/*"
+      - "k8s/*"
       - "ms/pypp/**/*.py"
       - "**/Dockerfile"
 
