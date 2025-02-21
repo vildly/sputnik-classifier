@@ -42,6 +42,15 @@ jobs:
       id-token: "write"
 
     steps:
+    # IMPORTANT!
+    # THIS MUST ALWAYS BE FIRST OTHERWISE IT OVERWRITES THE
+    # GENERATED KUBECTL FILE.
+    # #######################################
+    # Required for the "docker build" to work
+    # https://github.com/marketplace/actions/checkout
+    - name: Checkout
+      uses: actions/checkout@v4.2.2
+
 
     # Setup gcloud CLI
     # https://github.com/marketplace/actions/authenticate-to-google-cloud
@@ -66,11 +75,6 @@ jobs:
         registry: ${{ env.GAR_ZONE }}-docker.pkg.dev
         username: _json_key
         password: ${{ secrets.GKE_SA_KEY }}
-
-    # Required for the "docker build" to work
-    # https://github.com/marketplace/actions/checkout
-    - name: Checkout
-      uses: actions/checkout@v4.2.2
 
     - name: Get pods
       run: |-
