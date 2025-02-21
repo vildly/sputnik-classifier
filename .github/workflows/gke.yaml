@@ -113,7 +113,7 @@ jobs:
     - name: Set secrets
       run: |-
         kubectl delete secret gke-secrets || true && \
-        kubectl create secret generic gke-secrets --from-literal=mongodb_uri=$MONGODB_URI
+        kubectl create secret generic gke-secrets --from-literal=MONGODB_URI=$MONGODB_URI
 
     - name: Deploy
       run: |-

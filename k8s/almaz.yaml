@@ -2,44 +2,44 @@
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: "dalmaz"
+  name: "almaz"
   namespace: "default"
   labels:
-    app: "dalmaz"
+    app: "almaz"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: "dalmaz"
+      app: "almaz"
   template:
     metadata:
       labels:
-        app: "dalmaz"
+        app: "almaz"
     spec:
       containers:
-      - name: "calmaz"
+      - name: "almaz-1"
         image: "europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/almaz:latest"
         env:
         - name: "MONGODB_URI"
           valueFrom:
             secretKeyRef:
-              name: gke-secrets   # Name of the secret generated
-              key: mongodb_uri    # Key within the secret to use
+              key: "MONGODB_URI"
+              name: "gke-secrets"
 ---
 apiVersion: "autoscaling/v2"
 kind: "HorizontalPodAutoscaler"
 metadata:
-  name: "dalmaz-hpa"
+  name: "almaz-hpa-zm2r"
   namespace: "default"
   labels:
-    app: "dalmaz"
+    app: "almaz"
 spec:
   scaleTargetRef:
     kind: "Deployment"
-    name: "dalmaz"
+    name: "almaz"
     apiVersion: "apps/v1"
   minReplicas: 1
-  maxReplicas: 1
+  maxReplicas: 5
   metrics:
   - type: "Resource"
     resource:
@@ -51,15 +51,15 @@ spec:
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: "almaz"
+  name: "almaz-service"
   namespace: "default"
   labels:
-    app: "dalmaz"
+    app: "almaz"
 spec:
   ports:
   - protocol: "TCP"
     port: 5000
     targetPort: 80
   selector:
-    app: "dalmaz"
+    app: "almaz"
   type: "ClusterIP"
