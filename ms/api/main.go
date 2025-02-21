@@ -62,10 +62,11 @@ func main() {
 
 	// Authentication routes (outside the API group)
 	r.HandleFunc("/login", handlers.LoginHandler).Methods(http.MethodPost)
+	r.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)
 
 	// API version 1 group
 	apiV1 := r.PathPrefix("/api/v1").Subrouter()
-	apiV1.Use(middleware.JWTMiddleware) // Apply middleware to the group
+	apiV1.Use(middleware.JWTMiddleware)
 
 	apiV1.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)            // Corrected: /users
 	apiV1.HandleFunc("/users/{username}", handlers.RemoveUserHandler).Methods(http.MethodDelete) // Corrected: /users
