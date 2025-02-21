@@ -43,8 +43,8 @@ jobs:
 
     steps:
     # IMPORTANT!
-    # THIS MUST ALWAYS BE FIRST OTHERWISE IT OVERWRITES THE
-    # GENERATED KUBECTL FILE.
+    # THIS MUST ALWAYS BE FIRST OTHERWISE IT
+    # OVERWRITES THE GENERATED KUBECTL FILE.
     # #######################################
     # Required for the "docker build" to work
     # https://github.com/marketplace/actions/checkout
@@ -75,6 +75,13 @@ jobs:
         registry: ${{ env.GAR_ZONE }}-docker.pkg.dev
         username: _json_key
         password: ${{ secrets.GKE_SA_KEY }}
+
+    # IMPORTANT!
+    # Make sure to add the each variable to the CI/CD variables on GitHub.
+    - name: Set secrets
+      run: |-
+        kubectl delete secret gke-secrets || true && \
+        kubectl create secret generic gke-secrets --from-literal=mongodb_uri=$MONGODB_URI
 
     - name: Deploy
       run: |-

@@ -1,39 +1,65 @@
-apiVersion: apps/v1
-kind: Deployment
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
 metadata:
-  name: almaz
+  name: "deployment-almaz"
+  namespace: "default"
   labels:
-    app: rest-api
+    app: "deployment-almaz"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rest-api
+      app: "deployment-almaz"
   template:
     metadata:
       labels:
-        app: rest-api
+        app: "deployment-almaz"
     spec:
       containers:
-      - name: rest-api
-        image: europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/pypp:main-a7756a7b992ec3a8732566e4ade49109aca21054
-        ports:
-        - containerPort: 5000
-        # env:
-        # - name: ENV_VAR_NAME
-        #   value: "your-value"
+      - name: "almaz-sha256-1"
+        image: "europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/almaz"
+        env:
+        - name: "MONGODB_URI"
+          valueFrom:
+            secretKeyRef:
+              name: gke-secrets   # Name of the secret generated
+              key: mongodb_uri    # Key within the secret to use
 ---
-apiVersion: v1
-kind: Service
+apiVersion: "autoscaling/v2"
+kind: "HorizontalPodAutoscaler"
 metadata:
-  name: almaz-service
+  name: "deployment-almaz-hpa-k7nk"
+  namespace: "default"
   labels:
-    app: rest-api
+    app: "deployment-almaz"
 spec:
-  selector:
-    app: rest-api
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "deployment-almaz"
+    apiVersion: "apps/v1"
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+  - type: "Resource"
+    resource:
+      name: "cpu"
+      target:
+        type: "Utilization"
+        averageUtilization: 80
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "deployment-almaz-service"
+  namespace: "default"
+  labels:
+    app: "deployment-almaz"
+spec:
   ports:
-    - protocol: TCP
-      port: 5000
-      targetPort: 5000
-  type: ClusterIP
+  - protocol: "TCP"
+    port: 5000
+    targetPort: 80
+  selector:
+    app: "deployment-almaz"
+  type: "ClusterIP"
