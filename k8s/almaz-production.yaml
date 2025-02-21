@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: almaz
+  labels:
+    app: rest-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rest-api
+  template:
+    metadata:
+      labels:
+        app: rest-api
+    spec:
+      containers:
+      - name: rest-api
+        image: your-docker-repo/rest-api:latest
+        ports:
+        - containerPort: 5000
+        # env:
+        # - name: ENV_VAR_NAME
+        #   value: "your-value"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: almaz-service
+  labels:
+    app: rest-api
+spec:
+  selector:
+    app: rest-api
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
