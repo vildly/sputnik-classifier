@@ -85,9 +85,14 @@ jobs:
         kubectl delete secret gke-secrets || true && \
         kubectl create secret generic gke-secrets --from-literal=mongodb_uri=$MONGODB_URI
 
+    # - name: Deploy
+    #   run: |-
+    #     kubectl apply -f k8s/mongodb.yaml
+
     - name: Deploy
       run: |-
-        kubectl apply -f k8s/mongodb.yaml
+        kubectl delete -f k8s/mongodb.yaml --ignore-not-found && /
+        kubectl create -f k8s/mongodb.yaml
 
     - name: Get pods
       run: |-
