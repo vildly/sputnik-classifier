@@ -2,22 +2,22 @@
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: "deployment-almaz"
+  name: "dalmaz"
   namespace: "default"
   labels:
-    app: "deployment-almaz"
+    app: "dalmaz"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: "deployment-almaz"
+      app: "dalmaz"
   template:
     metadata:
       labels:
-        app: "deployment-almaz"
+        app: "dalmaz"
     spec:
       containers:
-      - name: "almaz-sha256-1"
+      - name: "calmaz"
         image: "europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/almaz:latest"
         env:
         - name: "MONGODB_URI"
@@ -29,14 +29,14 @@ spec:
 apiVersion: "autoscaling/v2"
 kind: "HorizontalPodAutoscaler"
 metadata:
-  name: "deployment-almaz-hpa-k7nk"
+  name: "dalmaz-hpa"
   namespace: "default"
   labels:
-    app: "deployment-almaz"
+    app: "dalmaz"
 spec:
   scaleTargetRef:
     kind: "Deployment"
-    name: "deployment-almaz"
+    name: "dalmaz"
     apiVersion: "apps/v1"
   minReplicas: 1
   maxReplicas: 1
@@ -51,15 +51,15 @@ spec:
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: "deployment-almaz-service"
+  name: "almaz"
   namespace: "default"
   labels:
-    app: "deployment-almaz"
+    app: "dalmaz"
 spec:
   ports:
   - protocol: "TCP"
     port: 5000
     targetPort: 80
   selector:
-    app: "deployment-almaz"
+    app: "dalmaz"
   type: "ClusterIP"
