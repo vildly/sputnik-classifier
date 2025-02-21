@@ -9,12 +9,12 @@ on:
   push:
     branches:
       - main
-    paths:
-      # Only trigger if changes occur in these files/dir
-      - ".github/*"
-      - "k8s/*"
-      - "ms/pypp/**/*.py"
-      - "**/Dockerfile"
+    # paths:
+    #   # Only trigger if changes occur in these files/dir
+    #   - ".github/*"
+    #   - "k8s/*"
+    #   - "ms/pypp/**/*.py"
+    #   - "**/Dockerfile"
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
