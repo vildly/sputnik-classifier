@@ -2,35 +2,35 @@
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: "deployment-mongo"
+  name: "dmongo"
   namespace: "default"
   labels:
-    app: "deployment-mongo"
+    app: "dmongo"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: "deployment-mongo"
+      app: "dmongo"
   template:
     metadata:
       labels:
-        app: "deployment-mongo"
+        app: "dmongo"
     spec:
       containers:
-      - name: "mongo-1"
+      - name: "cmongo"
         image: "mongo:latest"
 ---
 apiVersion: "autoscaling/v2"
 kind: "HorizontalPodAutoscaler"
 metadata:
-  name: "deployment-mongo-hpa-wyaw"
+  name: "dmongo-hpa"
   namespace: "default"
   labels:
-    app: "deployment-mongo"
+    app: "dmongo"
 spec:
   scaleTargetRef:
     kind: "Deployment"
-    name: "deployment-mongo"
+    name: "dmongo"
     apiVersion: "apps/v1"
   minReplicas: 1
   maxReplicas: 1
@@ -45,15 +45,15 @@ spec:
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: "deployment-mongo-service"
+  name: "mongodb"
   namespace: "default"
   labels:
-    app: "deployment-mongo"
+    app: "dmongo"
 spec:
   ports:
   - protocol: "TCP"
     port: 27017
     targetPort: 27017
   selector:
-    app: "deployment-mongo"
+    app: "dmongo"
   type: "ClusterIP"
