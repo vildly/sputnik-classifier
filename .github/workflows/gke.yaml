@@ -72,6 +72,16 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4.2.2
 
+    - name: Get pods
+      run: |-
+        kubectl get pods
+
+    # - name: Get kubectl
+    #   run: |-
+    #     gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE
+
+    # - name: Deploy
+    #   run: |-
 
     # # Build the Docker image
     # # -f -> defines where the Dockerfile is located
