@@ -87,7 +87,7 @@ jobs:
 
     - name: Deploy
       run: |-
-        kubectl create -f k8s/mongodb.yaml
+        kubectl apply -f k8s/mongodb.yaml
 
     - name: Get pods
       run: |-
