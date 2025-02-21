@@ -78,13 +78,6 @@ jobs:
         username: _json_key
         password: ${{ secrets.GKE_SA_KEY }}
 
-    - name: Get kubectl
-      run: |-
-        gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE
-
-    - name: Deploy
-      run: |-
-
     # Build the Docker image
     # -f -> defines where the Dockerfile is located
     # --tag ...
@@ -100,10 +93,6 @@ jobs:
           --build-arg GITHUB_REF="$GITHUB_REF" \
           ms/pypp/
 
-    - name: Publish
-      run: |-
-        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp"
-
     - name: Build Almaz
       run: |-
         docker build \
@@ -116,7 +105,8 @@ jobs:
     # Push the Docker image to Google Container Registry
     - name: Publish
       run: |-
-        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz"
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz" && \
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp"
 
     # IMPORTANT!
     # Make sure to add the each variable to the CI/CD variables on GitHub.
