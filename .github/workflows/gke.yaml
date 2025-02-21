@@ -108,5 +108,5 @@ jobs:
     # Deploy the Docker image to the GKE cluster
     - name: Deploy
       run: |-
-        kubectl apply -f k8s/mongodb-production.yaml
+        kubectl apply -f k8s/mongodb-production.yaml --validate=false
         kubectl get pods
