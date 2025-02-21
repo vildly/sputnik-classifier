@@ -1,77 +1,43 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongodb
-  labels:
-    app: mongodb
-spec:
-  ports:
-    - port: 27017
-      name: mongodb
-  selector:
-    app: mongodb
 ---
-apiVersion: apps/v1
-kind: StatefulSet
+apiVersion: "apps/v1"
+kind: "Deployment"
 metadata:
-  name: mongodb
+  name: "deployment-mongo"
+  namespace: "default"
   labels:
-    app: mongodb
+    app: "deployment-2"
 spec:
-  serviceName: "mongodb"
   replicas: 1
   selector:
     matchLabels:
-      app: mongodb
+      app: "deployment-mongo"
   template:
     metadata:
       labels:
-        app: mongodb
+        app: "deployment-mongo"
     spec:
-      terminationGracePeriodSeconds: 30
       containers:
-        - name: mongodb
-          image: mongo:8
-          command:
-            - "mongod"
-            - "--replSet"
-            - "rs0"
-            - "--bind_ip_all"
-          ports:
-            - containerPort: 27017
-              name: mongodb
-          readinessProbe:
-            exec:
-              command:
-                - mongo
-                - --eval
-                - "db.adminCommand('ping')"
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          livenessProbe:
-            exec:
-              command:
-                - mongo
-                - --eval
-                - "db.adminCommand('ping')"
-            initialDelaySeconds: 20
-            periodSeconds: 10
-          resources:
-            requests:
-              cpu: "500m"
-              memory: "512Mi"
-            limits:
-              cpu: "1"
-              memory: "1024Mi"
-          volumeMounts:
-            - name: mongodb-storage
-              mountPath: /data/db
-  volumeClaimTemplates:
-    - metadata:
-        name: mongodb-storage
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "standard"  # Adjust the storage class as needed
-        resources:
-          requests:
-            storage: 5Gi
+      - name: "mongo-1"
+        image: "mongo:latest"
+---
+apiVersion: "autoscaling/v2"
+kind: "HorizontalPodAutoscaler"
+metadata:
+  name: "deployment-mongo-hpa-4gsc"
+  namespace: "default"
+  labels:
+    app: "deployment-mongo"
+spec:
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "deployment-mongo"
+    apiVersion: "apps/v1"
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+  - type: "Resource"
+    resource:
+      name: "cpu"
+      target:
+        type: "Utilization"
+        averageUtilization: 80

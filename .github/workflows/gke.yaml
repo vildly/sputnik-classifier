@@ -72,35 +72,36 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4.2.2
 
-    # Build the Docker image
-    # -f -> defines where the Dockerfile is located
-    # --tag ...
-    # ...
-    # dir/nextdir -> defines where the build output will be put
-    #                (using the same as the Dockerfile is required if it contains multi-build steps)
-    - name: Build Pypp
-      run: |-
-        docker build \
-          -f ms/pypp/Dockerfile \
-          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG" \
-          --build-arg GITHUB_SHA="$GITHUB_SHA" \
-          --build-arg GITHUB_REF="$GITHUB_REF" \
-          ms/pypp/
 
-    - name: Publish
-      run: |-
-        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG"
+    # # Build the Docker image
+    # # -f -> defines where the Dockerfile is located
+    # # --tag ...
+    # # ...
+    # # dir/nextdir -> defines where the build output will be put
+    # #                (using the same as the Dockerfile is required if it contains multi-build steps)
+    # - name: Build Pypp
+    #   run: |-
+    #     docker build \
+    #       -f ms/pypp/Dockerfile \
+    #       --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG" \
+    #       --build-arg GITHUB_SHA="$GITHUB_SHA" \
+    #       --build-arg GITHUB_REF="$GITHUB_REF" \
+    #       ms/pypp/
 
-    - name: Build Almaz
-      run: |-
-        docker build \
-          -f ms/api/Dockerfile \
-          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG" \
-          --build-arg GITHUB_SHA="$GITHUB_SHA" \
-          --build-arg GITHUB_REF="$GITHUB_REF" \
-          ms/api/
+    # - name: Publish
+    #   run: |-
+    #     docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG"
 
-    # Push the Docker image to Google Container Registry
-    - name: Publish
-      run: |-
-        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG"
+    # - name: Build Almaz
+    #   run: |-
+    #     docker build \
+    #       -f ms/api/Dockerfile \
+    #       --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG" \
+    #       --build-arg GITHUB_SHA="$GITHUB_SHA" \
+    #       --build-arg GITHUB_REF="$GITHUB_REF" \
+    #       ms/api/
+
+    # # Push the Docker image to Google Container Registry
+    # - name: Publish
+    #   run: |-
+    #     docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG"

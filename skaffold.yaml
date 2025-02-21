@@ -1,8 +1,0 @@
-# https://cloud.google.com/deploy/docs/using-skaffold/getting-started-skaffold
-apiVersion: skaffold/v4beta7
-kind: Config
-manifests:
-  rawYaml:
-  - deployment.yaml
-deploy:
-  kubectl: {}
