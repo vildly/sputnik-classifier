@@ -20,17 +20,17 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
   # cluster name
-  GKE_CLUSTER: ${{ env.GKE_CLUSTER }}
+  GKE_CLUSTER: northstar-k8s
   # cluster zone
-  GKE_ZONE: ${{ env.GKE_ZONE }}
+  GKE_ZONE: europe-north1
   # image tag based of the "branch.commit-sha"
   # Only a-z, 0-9, _ (underscores), . (periods) and - (hyphens) are allowed.
   # IMAGE_TAG: ${{ github.ref_name || 'default' }}-${{ github.sha }}
   IMAGE_TAG: "latest"
   # artifact registry zone
-  GAR_ZONE: ${{ env.GKE_ZONE }}
+  GAR_ZONE: europe-north1
   # artifact registry repository
-  GAR_REPO: ${{ env.GAR_REPO }}
+  GAR_REPO: northstar-repo
   MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
 jobs:
