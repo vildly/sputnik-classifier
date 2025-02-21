@@ -87,7 +87,7 @@ jobs:
 
     - name: Deploy
       run: |-
-        kubectl apply -f k8s/*.yaml
+        kubectl apply -f k8s/mongodb.yaml -f k8s/almaz.yaml
 
     - name: Get pods
       run: |-
