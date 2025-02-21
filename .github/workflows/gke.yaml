@@ -78,6 +78,46 @@ jobs:
         username: _json_key
         password: ${{ secrets.GKE_SA_KEY }}
 
+    - name: Get kubectl
+      run: |-
+        gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE
+
+    - name: Deploy
+      run: |-
+
+    # Build the Docker image
+    # -f -> defines where the Dockerfile is located
+    # --tag ...
+    # ...
+    # dir/nextdir -> defines where the build output will be put
+    #                (using the same as the Dockerfile is required if it contains multi-build steps)
+    - name: Build Pypp
+      run: |-
+        docker build \
+          -f ms/pypp/Dockerfile \
+          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp" \
+          --build-arg GITHUB_SHA="$GITHUB_SHA" \
+          --build-arg GITHUB_REF="$GITHUB_REF" \
+          ms/pypp/
+
+    - name: Publish
+      run: |-
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp"
+
+    - name: Build Almaz
+      run: |-
+        docker build \
+          -f ms/api/Dockerfile \
+          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz" \
+          --build-arg GITHUB_SHA="$GITHUB_SHA" \
+          --build-arg GITHUB_REF="$GITHUB_REF" \
+          ms/api/
+
+    # Push the Docker image to Google Container Registry
+    - name: Publish
+      run: |-
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz"
+
     # IMPORTANT!
     # Make sure to add the each variable to the CI/CD variables on GitHub.
     - name: Set secrets
@@ -92,43 +132,3 @@ jobs:
     - name: Get pods
       run: |-
         kubectl get pods
-
-    # - name: Get kubectl
-    #   run: |-
-    #     gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE
-
-    # - name: Deploy
-    #   run: |-
-
-    # # Build the Docker image
-    # # -f -> defines where the Dockerfile is located
-    # # --tag ...
-    # # ...
-    # # dir/nextdir -> defines where the build output will be put
-    # #                (using the same as the Dockerfile is required if it contains multi-build steps)
-    # - name: Build Pypp
-    #   run: |-
-    #     docker build \
-    #       -f ms/pypp/Dockerfile \
-    #       --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG" \
-    #       --build-arg GITHUB_SHA="$GITHUB_SHA" \
-    #       --build-arg GITHUB_REF="$GITHUB_REF" \
-    #       ms/pypp/
-
-    # - name: Publish
-    #   run: |-
-    #     docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp:$IMAGE_TAG"
-
-    # - name: Build Almaz
-    #   run: |-
-    #     docker build \
-    #       -f ms/api/Dockerfile \
-    #       --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG" \
-    #       --build-arg GITHUB_SHA="$GITHUB_SHA" \
-    #       --build-arg GITHUB_REF="$GITHUB_REF" \
-    #       ms/api/
-
-    # # Push the Docker image to Google Container Registry
-    # - name: Publish
-    #   run: |-
-    #     docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz:$IMAGE_TAG"
