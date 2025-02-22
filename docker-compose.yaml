@@ -15,7 +15,7 @@ services:
   almaz:
     container_name: almaz
     build:
-      context: ./ms/api/
+      context: ./ms/almaz/
       dockerfile: Dockerfile
     ports:
       - "5000:80"

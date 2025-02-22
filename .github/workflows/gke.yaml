@@ -18,7 +18,6 @@ on:
       - "**/Dockerfile"
 
 env:
-  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
   # cluster name
   GKE_CLUSTER: northstar-k8s
   # cluster zone
@@ -31,13 +30,15 @@ env:
   GAR_ZONE: europe-north1
   # artifact registry repository
   GAR_REPO: northstar-repo
-  MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
 jobs:
   main:
     name: main
     runs-on: ubuntu-latest
     environment: production
+    strategy:
+      matrix:
+        image: [ "almaz", "mir" ]
     # May be needed for "get-gke-credentials" to work:
     permissions:
       contents: "read"
@@ -52,7 +53,6 @@ jobs:
     # https://github.com/marketplace/actions/checkout
     - name: Checkout
       uses: actions/checkout@v4.2.2
-
 
     # Setup gcloud CLI
     # https://github.com/marketplace/actions/authenticate-to-google-cloud
@@ -84,33 +84,26 @@ jobs:
     # ...
     # dir/nextdir -> defines where the build output will be put
     #                (using the same as the Dockerfile is required if it contains multi-build steps)
-    - name: Build
+    - name: Build ${{ matrix.image }} docker image
       run: |-
         docker build \
-          -f ms/api/Dockerfile \
-          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz" \
+          -f ms/${{ matrix.image }}/Dockerfile \
+          --tag "$GAR_ZONE-docker.pkg.dev/${{ secrets.GKE_PROJECT }}/$GAR_REPO/${{ matrix.image }}" \
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
-          ms/api/
-        # docker build \
-        #   -f ms/mir/Dockerfile \
-        #   --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/mir" \
-        #   --build-arg GITHUB_SHA="$GITHUB_SHA" \
-        #   --build-arg GITHUB_REF="$GITHUB_REF" \
-        #   ms/mir/
+          ms/${{ matrix.image }}/
 
     # Push the Docker image to Google Container Registry
     - name: Publish
       run: |-
-        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz" && \
-        # docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/mir"
+        docker push "$GAR_ZONE-docker.pkg.dev/${{ secrets.GKE_PROJECT }}/$GAR_REPO/${{ matrix.image }}"
 
     # IMPORTANT!
     # Make sure to add the each variable to the CI/CD variables on GitHub.
     - name: Set secrets
       run: |-
         kubectl delete secret gke-secrets || true && \
-        kubectl create secret generic gke-secrets --from-literal=MONGODB_URI=$MONGODB_URI
+        kubectl create secret generic gke-secrets --from-literal=MONGODB_URI=${{ secrets.MONGODB_URI }}
 
     - name: Deploy
       run: |-
