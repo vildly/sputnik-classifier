@@ -13,10 +13,9 @@ String.raw`..\/_____/...\/_/.....\/_____/.....\/_/...\/_/.\/_/...\/_/...\/_/\/_/
 
 export default function App() {
     return (
-        <div className="max-w-[80ch] h-screen mx-auto py-6 flex flex-col items-center">
+        <div className="w-full max-w-xl p-4 h-screen mx-auto py-6 flex flex-col items-center">
             <ASCIIArt art={ascii} bgPattern={new RegExp(/\./g)} bgColor={HexColors.BLACK} />
             <JSONForm />
-            <Loading color={HexColors.BLUE} size={20} />
         </div>
     )
 }

@@ -1,11 +1,11 @@
 import { HexColors } from "../lib/colors"
 
 interface LoadingProps {
-    color: HexColors
+    color?: HexColors
     size?: number
 }
 
-export default function Loading({ color, size = 24 }: LoadingProps) {
+export default function Loading({ color = HexColors.BLACK, size = 24 }: LoadingProps) {
     // Render an SVG spinner that rotates using Tailwind's animate-spin class
     return (
         <svg

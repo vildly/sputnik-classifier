@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react"
+import Input from "./Input"
+import Label from "./Label"
 import { cn } from "../lib/utils"
 
 interface JSONUploaderProps {
-    errorCB?: (error: string | null) => void
-    setValue: (value: string) => void
-    label: string
+    errorCallback?: (error: string | null) => void
+    valueCallback: (value: string) => void
 }
 
-export default function JSONUploader({ errorCB, setValue, label }: JSONUploaderProps) {
+export default function JSONUploader({ errorCallback, valueCallback }: JSONUploaderProps) {
     const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => errorCB && errorCB(error), [error])
+    useEffect(() => errorCallback && errorCallback(error), [error])
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -24,9 +25,10 @@ export default function JSONUploader({ errorCB, setValue, label }: JSONUploaderP
                     try {
                         const parsed = JSON.parse(fileContent)
                         const formatted = JSON.stringify(parsed, null, 2)
-                        setValue(formatted)
+                        valueCallback(formatted)
                         setError(null)
                     } catch (err) {
+                        valueCallback(fileContent)
                         setError("Invalid JSON file")
                     }
                 }
@@ -42,14 +44,14 @@ export default function JSONUploader({ errorCB, setValue, label }: JSONUploaderP
 
     return (
         <div className="flex flex-col space-y-2">
-            <label className="text-white text-lg">
-                {error ? <span className="text-red-500">{error}</span> : label}
-            </label>
-            <input
+            <Label
+                label={error ? error : "Upload JSON"}
+                className={cn(error && "text-red-500")}
+            />
+            <Input
                 type="file"
                 accept="application/json"
                 onChange={handleFileChange}
-                className={cn("bg-neutral-900 p-2 rounded-lg border-gray-300 text-white")}
             />
         </div>
     )

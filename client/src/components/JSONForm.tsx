@@ -1,6 +1,9 @@
 import { useState } from "react"
 import JSONUploader from "./JSONUploader"
-import JSONInput from "./JSONInput"
+import JSONEditor from "./JSONEditor"
+import Input from "./Input"
+import Loading from "./Loading"
+import { HexColors } from "../lib/colors"
 
 export default function JSONForm() {
     const [error, setError] = useState<string | null>(null)
@@ -34,23 +37,10 @@ export default function JSONForm() {
     return (
         <div className="w-full h-full">
             <form onSubmit={handleSubmit} className="h-full flex flex-col space-y-2">
-                <JSONUploader
-                    errorCB={handleError}
-                    setValue={setValue}
-                    label="Upload JSON file"
-                />
-                <JSONInput
-                    errorCB={handleError}
-                    setValue={setValue}
-                    value={value}
-                    label="Edit JSON content"
-                />
-                <button
-                    type="submit"
-                    className="w-fit px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600 transition"
-                >
-                    Submit
-                </button>
+                <JSONUploader errorCallback={handleError} valueCallback={setValue} />
+                {value && <JSONEditor errorCallback={handleError} valueCallback={setValue} value={value} />}
+                {(!error && value) && <Input type="submit" value="Submit" />}
+                {processing && <Loading color={HexColors.WHITE} />}
             </form>
         </div>
     )
