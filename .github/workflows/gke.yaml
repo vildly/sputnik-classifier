@@ -21,7 +21,6 @@ env:
   GKE_CLUSTER: northstar-k8s
   # Cluster zone
   GKE_ZONE: europe-north1
-
   # image tag based of the "branch.commit-sha"
   # Only a-z, 0-9, _ (underscores), . (periods) and - (hyphens) are allowed.
   # IMAGE_TAG: ${{ github.ref_name || 'default' }}-${{ github.sha }}
@@ -33,12 +32,46 @@ env:
 
 jobs:
   common:
-    uses: ./.github/workflows/common.yaml
-    with:
-      GKE_CLUSTER: $GKE_CLUSTER
-      GKE_ZONE: $GKE_ZONE
-    secrets:
-      GKE_SA_KEY: ${{ secrets.GKE_SA_KEY }}
+    name: Common setup
+    runs-on: ubuntu-latest
+    # May be needed for "get-gke-credentials" to work:
+    permissions:
+      contents: "read"
+      id-token: "write"
+    steps:
+    # IMPORTANT!
+    # THIS MUST ALWAYS BE FIRST OTHERWISE IT
+    # OVERWRITES THE GENERATED KUBECTL FILE.
+    # #######################################
+    # Required for the "docker build" to work
+    # https://github.com/marketplace/actions/checkout
+    - name: Checkout
+      uses: actions/checkout@v4.2.2
+
+    # Setup gcloud CLI
+    # https://github.com/marketplace/actions/authenticate-to-google-cloud
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2.1.8
+      with:
+        credentials_json: ${{ secrets.GKE_SA_KEY }}
+
+    # Get the GKE credentials so we can deploy to the cluster
+    # https://github.com/marketplace/actions/get-gke-credentials
+    - name: Get GKE Credentials
+      uses: google-github-actions/get-gke-credentials@v2.3.1
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+
+    # GitHub Action to login against a Docker registry
+    # https://github.com/marketplace/actions/docker-login
+    - name: Docker Login
+      uses: docker/login-action@v3.3.0
+      with:
+        registry: ${{ env.GAR_ZONE }}-docker.pkg.dev
+        username: _json_key
+        password: ${{ secrets.GKE_SA_KEY }}
+
 
   build:
     name: Build and publish
@@ -67,6 +100,7 @@ jobs:
     - name: Publish
       run: |-
         docker push "$GAR_ZONE-docker.pkg.dev/${{ secrets.GKE_PROJECT }}/$GAR_REPO/${{ matrix.image }}"
+
 
   deploy:
     name: Deployment
