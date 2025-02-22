@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-var key = os.Getenv("JWT")
-var jwtKey = []byte(key)
+var secret = os.Getenv("SECRET")
+var jwtSecret = []byte(secret)
 
 type Claims struct {
 	Username string `json:"username"`
@@ -24,14 +24,14 @@ func GenerateJWT(username string) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtKey)
+	return token.SignedString(jwtSecret)
 }
 
 // ValidateJWT validates a JWT token
 func ValidateJWT(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return jwtSecret, nil
 	})
 	if err != nil || !token.Valid {
 		return nil, err
