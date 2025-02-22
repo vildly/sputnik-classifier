@@ -84,16 +84,7 @@ jobs:
     # ...
     # dir/nextdir -> defines where the build output will be put
     #                (using the same as the Dockerfile is required if it contains multi-build steps)
-    - name: Build Pypp
-      run: |-
-        docker build \
-          -f ms/pypp/Dockerfile \
-          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp" \
-          --build-arg GITHUB_SHA="$GITHUB_SHA" \
-          --build-arg GITHUB_REF="$GITHUB_REF" \
-          ms/pypp/
-
-    - name: Build Almaz
+    - name: Build
       run: |-
         docker build \
           -f ms/api/Dockerfile \
@@ -101,12 +92,18 @@ jobs:
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
           ms/api/
+        # docker build \
+        #   -f ms/mir/Dockerfile \
+        #   --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/mir" \
+        #   --build-arg GITHUB_SHA="$GITHUB_SHA" \
+        #   --build-arg GITHUB_REF="$GITHUB_REF" \
+        #   ms/mir/
 
     # Push the Docker image to Google Container Registry
     - name: Publish
       run: |-
         docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/almaz" && \
-        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/pypp"
+        # docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/mir"
 
     # IMPORTANT!
     # Make sure to add the each variable to the CI/CD variables on GitHub.
