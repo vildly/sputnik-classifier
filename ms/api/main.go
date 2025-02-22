@@ -51,12 +51,18 @@ func main() {
 	certFile := os.Getenv("TLS_CERT_FILE")
 	keyFile := os.Getenv("TLS_KEY_FILE")
 
-	docs.SwaggerInfo.Title = "Example API"
-	docs.SwaggerInfo.Description = "This is an awesome example API" // Update description
-	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = os.Getenv("API_HOST")        // Update host if needed
-	docs.SwaggerInfo.BasePath = "/api/v1"                // Consistent base path
-	docs.SwaggerInfo.Schemes = []string{"http", "https"} // Update schemes if needed
+  // Retrieve the host name of the local machine.
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("Error retrieving hostname: %v", err)
+	}
+
+	docs.SwaggerInfo.Title = "Almaz"
+	docs.SwaggerInfo.Description = ""
+	docs.SwaggerInfo.Version = "1.0.0"
+	docs.SwaggerInfo.Host = hostname
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	r := mux.NewRouter()
 
@@ -68,8 +74,8 @@ func main() {
 	apiV1 := r.PathPrefix("/api/v1").Subrouter()
 	apiV1.Use(middleware.JWTMiddleware)
 
-	apiV1.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)            // Corrected: /users
-	apiV1.HandleFunc("/users/{username}", handlers.RemoveUserHandler).Methods(http.MethodDelete) // Corrected: /users
+	apiV1.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)
+	apiV1.HandleFunc("/users/{username}", handlers.RemoveUserHandler).Methods(http.MethodDelete)
 	apiV1.HandleFunc("/data", handlers.GetDataHandler).Methods(http.MethodGet)
 	apiV1.HandleFunc("/data/{id}", handlers.GetDataByIDHandler).Methods(http.MethodGet)
 	apiV1.HandleFunc("/data", handlers.CreateDataHandler).Methods(http.MethodPost)
