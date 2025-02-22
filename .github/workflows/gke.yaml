@@ -35,8 +35,8 @@ jobs:
   common:
     uses: ./.github/workflows/common.yaml
     with:
-      GKE_CLUSTER: ${{ env.GKE_CLUSTER }}
-      GKE_ZONE: ${{ env.GKE_ZONE }}
+      GKE_CLUSTER: $GKE_CLUSTER
+      GKE_ZONE: $GKE_ZONE
     secrets:
       GKE_SA_KEY: ${{ secrets.GKE_SA_KEY }}
 
