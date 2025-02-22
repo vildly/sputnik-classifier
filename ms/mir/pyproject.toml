@@ -1,7 +1,7 @@
 [project]
-name = "pypp"
+name = "Mir"
 version = "0.1.0"
-description = "Python pre-processor"
+description = "Python preprocessor"
 authors = [
     {name = "Samuel Svensson", email = "ss225ze@student.lnu.se"},
     {name = "Andreas Nilsson", email = "an224qi@student.lnu.se"},
