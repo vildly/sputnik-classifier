@@ -71,6 +71,22 @@ jobs:
         registry: ${{ env.GAR_ZONE }}-docker.pkg.dev
         username: _json_key
         password: ${{ secrets.GKE_SA_KEY }}
+    # Upload a Build Artifact
+    # https://github.com/marketplace/actions/upload-a-build-artifact
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4.6.1
+      with:
+        # Name of the artifact to upload.
+        # Optional. Default is 'artifact'
+        name: common-artifact
+        # A file, directory or wildcard pattern that describes what to upload
+        # Required.
+        path: .
+        # Duration after which artifact will expire in days. 0 means using default retention.
+        # Minimum 1 day.
+        # Maximum 90 days unless changed from the repository settings page.
+        # Optional. Defaults to repository settings.
+        retention-days: 1
 
 
   build:
@@ -81,6 +97,19 @@ jobs:
       matrix:
         image: [ "almaz", "mir" ]
     steps:
+    # Download a Build Artifact
+    # https://github.com/marketplace/actions/download-a-build-artifact
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4.1.8
+      with:
+        # Name of the artifact to download.
+        # If unspecified, all artifacts for the run are downloaded.
+        # Optional.
+        name: common-artifact
+        # Destination path. Supports basic tilde expansion.
+        # Optional. Default is $GITHUB_WORKSPACE
+        # path:
+
     # Build the Docker image
     # -f -> defines where the Dockerfile is located
     # --tag ...
@@ -107,6 +136,19 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+    # Download a Build Artifact
+    # https://github.com/marketplace/actions/download-a-build-artifact
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4.1.8
+      with:
+        # Name of the artifact to download.
+        # If unspecified, all artifacts for the run are downloaded.
+        # Optional.
+        name: common-artifact
+        # Destination path. Supports basic tilde expansion.
+        # Optional. Default is $GITHUB_WORKSPACE
+        # path:
+
     # IMPORTANT!
     # Make sure to add the each variable to the CI/CD variables on GitHub.
     - name: Set secrets
