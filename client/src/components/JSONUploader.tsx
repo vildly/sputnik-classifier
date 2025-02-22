@@ -52,6 +52,7 @@ export default function JSONUploader({ errorCallback, valueCallback }: JSONUploa
                 type="file"
                 accept="application/json"
                 onChange={handleFileChange}
+                className="cursor-pointer"
             />
         </div>
     )

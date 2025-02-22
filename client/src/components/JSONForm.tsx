@@ -39,7 +39,7 @@ export default function JSONForm() {
             <form onSubmit={handleSubmit} className="h-full flex flex-col space-y-2">
                 <JSONUploader errorCallback={handleError} valueCallback={setValue} />
                 {value && <JSONEditor errorCallback={handleError} valueCallback={setValue} value={value} />}
-                {(!error && value) && <Input type="submit" value="Submit" />}
+                {(!error && value) && <Input type="submit" value="Submit" className="cursor-pointer" />}
                 {processing && <Loading color={HexColors.WHITE} />}
             </form>
         </div>
