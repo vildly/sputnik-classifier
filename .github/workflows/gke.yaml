@@ -25,6 +25,7 @@ env:
   GKE_CLUSTER: northstar-k8s
   # Cluster zone
   GKE_ZONE: europe-north1
+
   # image tag based of the "branch.commit-sha"
   # Only a-z, 0-9, _ (underscores), . (periods) and - (hyphens) are allowed.
   # IMAGE_TAG: ${{ github.ref_name || 'default' }}-${{ github.sha }}
@@ -103,6 +104,15 @@ jobs:
       contents: "read"
       id-token: "write"
     steps:
+    # IMPORTANT!
+    # THIS MUST ALWAYS BE FIRST OTHERWISE IT
+    # OVERWRITES THE GENERATED KUBECTL FILE.
+    # #######################################
+    # Required for the "docker build" to work
+    # https://github.com/marketplace/actions/checkout
+    - name: Checkout
+      uses: actions/checkout@v4.2.2
+
     # Setup gcloud CLI
     # https://github.com/marketplace/actions/authenticate-to-google-cloud
     - name: Authenticate to Google Cloud
