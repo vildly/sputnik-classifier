@@ -1,3 +1,4 @@
+# docker-compose.yaml
 # Ports mapping:
 # internal ms: 400X
 # external ms: 500X
@@ -8,8 +9,12 @@ services:
     build:
       context: ./ms/mir/
       dockerfile: Dockerfile
-    # ports:
-    #   - "4000:kafka-port-here?"
+    networks:
+      - net
+    depends_on:
+      - mongodb
+    environment:
+      MONGODB_URI: "mongodb://mongodb:27017"
 
   # GO API
   almaz:
@@ -17,15 +22,18 @@ services:
     build:
       context: ./ms/almaz/
       dockerfile: Dockerfile
+    networks:
+      - net
     ports:
+      # Make sure this matches with the environment variable
       - "5000:80"
     depends_on:
       - mongodb
     environment:
       # Hostname must match with the container_name of mongo
-      MONGODB_URI: ${MONGODB_URI:-"mongodb://mongodb:27017"}
-      PORT: ${PORT:-80}
-      SECRET: ${SECRET:-"SUPERSECRETKEYSHOULDNTBEHERE"}
+      MONGODB_URI: "mongodb://mongodb:27017"
+      PORT: 80
+      SECRET: "SUPERSECRETKEYSHOULDNTBEHERE"
       # Uncomment these if exposing the API outwards directly:
       # TLS_KEY_FILE:
       # TLS_CERT_FILE:
@@ -33,11 +41,26 @@ services:
 
   mongodb:
     container_name: mongodb
-    image: mongo:latest
+    image: mongo:8.0.5 # https://hub.docker.com/_/mongo/tags
+    networks:
+      - net
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
 
+  kafka:
+    container_name: kafka
+    image: apache/kafka:4.0.0-rc0 # https://hub.docker.com/r/apache/kafka/tags
+    networks:
+      - net
+    ports:
+      - "9002:9002"
+
+networks:
+  net:
+    name: net
+
 volumes:
   mongo_data:
+    name: mongo_data

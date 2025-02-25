@@ -1,9 +1,9 @@
-# BUILD STAGE
-# #######################
 # Define the Python base version
+# https://hub.docker.com/_/python/tags
 ARG PYTHON_BASE=3.13-slim
 
-# Build stage
+# BUILD STAGE
+# #######################
 FROM python:$PYTHON_BASE AS builder
 
 # Install PDM
@@ -39,7 +39,7 @@ COPY --from=builder /app/.venv/ /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application source files into the final image
-COPY main.py clean.py /app/
+COPY ./src/ /app/
 
 # Create the directory for NLTK data downloads as expected in your code
 # -p flag checks if the directory already exists
@@ -47,9 +47,9 @@ RUN mkdir -p /app/.venv/lib/nltk_data
 
 # Pre-download required NLTK resources to avoid runtime downloads
 RUN python -c "import nltk; \
-    nltk.download('stopwords', download_dir='/app/.venv/lib/nltk_data'); \
-    nltk.download('punkt_tab', download_dir='/app/.venv/lib/nltk_data'); \
-    nltk.download('punkt', download_dir='/app/.venv/lib/nltk_data')"
+  nltk.download('stopwords', download_dir='/app/.venv/lib/nltk_data'); \
+  nltk.download('punkt_tab', download_dir='/app/.venv/lib/nltk_data'); \
+  nltk.download('punkt', download_dir='/app/.venv/lib/nltk_data')"
 
 # Set the working directory for running the application
 WORKDIR /app

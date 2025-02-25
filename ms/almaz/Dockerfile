@@ -1,5 +1,12 @@
-# Stage 1: Build the Go application
-FROM golang:1.23-alpine AS builder
+# Define the base versions
+# https://hub.docker.com/_/golang/tags
+ARG GOLANG_BASE=1.24-alpine
+# https://hub.docker.com/_/alpine/tags
+ARG ALPINE_BASE=3.21.3
+
+# BUILD STAGE
+# #######################
+FROM golang:$GOLANG_BASE AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -16,8 +23,10 @@ COPY . .
 # Build the Go application
 RUN go build -o main .
 
-# Stage 2: Create a smaller base image for running the app
-FROM alpine:latest
+# FINAL STAGE
+# #######################
+# Run stage (final image)
+FROM alpine:$ALPINE_BASE
 
 # Set the working directory
 WORKDIR /root/
