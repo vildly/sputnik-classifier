@@ -49,14 +49,6 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  kafka:
-    container_name: kafka
-    image: apache/kafka:4.0.0-rc0 # https://hub.docker.com/r/apache/kafka/tags
-    networks:
-      - net
-    ports:
-      - "9002:9002"
-
 networks:
   net:
     name: net
