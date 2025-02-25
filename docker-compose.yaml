@@ -23,9 +23,9 @@ services:
       - mongodb
     environment:
       # Hostname must match with the container_name of mongo
-      MONGODB_URI: "mongodb://mongodb:27017"
-      PORT: 80
-      SECRET: "SUPERSECRETKEYSHOULDNTBEHERE"
+      MONGODB_URI: ${MONGODB_URI:-"mongodb://mongodb:27017"}
+      PORT: ${PORT:-80}
+      SECRET: ${SECRET:-"SUPERSECRETKEYSHOULDNTBEHERE"}
       # Uncomment these if exposing the API outwards directly:
       # TLS_KEY_FILE:
       # TLS_CERT_FILE:
