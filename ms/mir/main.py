@@ -1,8 +1,9 @@
-import argparse
 import os
 import nltk
+from dotenv import load_dotenv
 
 from clean import filter_data
+from db import add_one, connect_to_database, find_one, get_collection
 
 
 def get_dependencies() -> None:
@@ -22,26 +23,9 @@ def get_dependencies() -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", type=str, required=True, help="Path to the input JSON file.")
-    parser.add_argument("-o", type=str, required=True, help="Path to the output JSON file.")
-    parser.add_argument("-keys", type=str, nargs="+", required=True, help="List of keys to keep (example: -keys: title description richText)")
-    args = parser.parse_args()
-    
-    get_dependencies() 
+    load_dotenv()
+    connect_to_database(os.getenv("MONGODB_URI"))
 
-    input_file = args.i 
-    output_file = args.o
-    keys = args.keys
-
-    # Ensures that the output directory exists
-    output_dir = os.path.dirname(output_file)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    filter_data(
-        in_file_path=input_file,
-        out_file_path=output_file,
-        keys=keys,
-        language="swedish"
-    )
+    # col = get_collection("db", "preprocessed")
+    # print(add_one(col=col, data={"data": "hello world"}))
+    # print(find_one(col=col, query={"data": "hello world"}))
