@@ -1,8 +1,15 @@
+# main.py
 import os
+import asyncio
 import nltk
 from dotenv import load_dotenv
+from pylo import get_logger
 
-from db import connect_to_database
+from db import add_one, connect_to_database, find_one, get_collection
+from rabbitmq import listen
+
+
+logger = get_logger()
 
 
 def get_dependencies() -> None:
@@ -22,9 +29,17 @@ def get_dependencies() -> None:
 
 
 if __name__ == "__main__":
-    load_dotenv()
-    connect_to_database(os.getenv("MONGODB_URI"))
+    try:
+        load_dotenv()
+        connect_to_database(os.getenv("MONGODB_URI"))
 
-    # col = get_collection("db", "preprocessed")
-    # print(add_one(col=col, data={"data": "hello world"}))
-    # print(find_one(col=col, query={"data": "hello world"}))
+        # TESTING PURPOSES:
+        col = get_collection("db", "preprocessed")
+        add_one_res = add_one(col=col, data={"data": "hello world"})
+        find_one_res = find_one(col=col, query={"data": "hello world"})
+        logger.debug(add_one_res)
+        logger.debug(find_one_res)
+
+        asyncio.run(listen())
+    except Exception as exc:
+        logger.exception(exc)

@@ -6,6 +6,9 @@ ARG PYTHON_BASE=3.13-slim
 # #######################
 FROM python:$PYTHON_BASE AS builder
 
+# Install Git so that packages requiring it can be fetched
+RUN apt-get update && apt-get install git -y && rm -rf /var/lib/apt/lists/*
+
 # Install PDM
 RUN pip install -U pdm
 
@@ -15,7 +18,7 @@ ENV PDM_CHECK_UPDATE=false
 # Not sure why the README.md file is required here,
 # but think it has something to do with the pdm install cmd?
 # Copy project files needed for dependency installation
-COPY pyproject.toml pdm.lock README.md /app/
+COPY pyproject.toml pdm.lock /app/
 
 # Should have to do this but I'll leave this commented
 # Copy the source code to the build stage
@@ -39,7 +42,7 @@ COPY --from=builder /app/.venv/ /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application source files into the final image
-COPY ./src/ /app/
+COPY ./*.py /app/
 
 # Create the directory for NLTK data downloads as expected in your code
 # -p flag checks if the directory already exists

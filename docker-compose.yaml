@@ -13,31 +13,34 @@ services:
       - net
     depends_on:
       - mongodb
+      - rabbitmq
     environment:
       MONGODB_URI: "mongodb://mongodb:27017"
+      RABBITMQ_URI: "amqp://rabbitmq:5672"
+      RABBITMQ_QUEUE: "test"
 
-  # GO API
-  almaz:
-    container_name: almaz
-    build:
-      context: ./ms/almaz/
-      dockerfile: Dockerfile
-    networks:
-      - net
-    ports:
-      # Make sure this matches with the environment variable
-      - "5000:80"
-    depends_on:
-      - mongodb
-    environment:
-      # Hostname must match with the container_name of mongo
-      MONGODB_URI: "mongodb://mongodb:27017"
-      PORT: 80
-      SECRET: "SUPERSECRETKEYSHOULDNTBEHERE"
-      # Uncomment these if exposing the API outwards directly:
-      # TLS_KEY_FILE:
-      # TLS_CERT_FILE:
-      # TLS_PORT:
+  # # GO API
+  # almaz:
+  #   container_name: almaz
+  #   build:
+  #     context: ./ms/almaz/
+  #     dockerfile: Dockerfile
+  #   networks:
+  #     - net
+  #   ports:
+  #     # Make sure this matches with the environment variable
+  #     - "5000:80"
+  #   depends_on:
+  #     - mongodb
+  #   environment:
+  #     # Hostname must match with the container_name of mongo
+  #     MONGODB_URI: "mongodb://mongodb:27017"
+  #     PORT: 80
+  #     SECRET: "SUPERSECRETKEYSHOULDNTBEHERE"
+  #     # Uncomment these if exposing the API outwards directly:
+  #     # TLS_KEY_FILE:
+  #     # TLS_CERT_FILE:
+  #     # TLS_PORT:
 
   mongodb:
     container_name: mongodb
@@ -49,6 +52,16 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:alpine # https://hub.docker.com/_/rabbitmq/tags
+    networks:
+      - net
+    ports:
+      - "5672:5672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
 networks:
   net:
     name: net
@@ -56,3 +69,5 @@ networks:
 volumes:
   mongo_data:
     name: mongo_data
+  rabbitmq_data:
+    name: rabbitmq_data

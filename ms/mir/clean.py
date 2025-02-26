@@ -1,7 +1,5 @@
 from typing import List
-
 import json
-
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer, word_tokenize
 
@@ -87,8 +85,8 @@ def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language
                 text=cur_obj,
                 spacer=" ",
                 language=language
-            ) 
-            
+            )
+
             # If the pre-processing has removed all content then
             # simply continue and skip adding the object to the list
             if not len(cur_obj):
