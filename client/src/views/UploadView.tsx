@@ -5,6 +5,7 @@ import Input from "../components/Input"
 import Loading from "../components/Loading"
 import { HexColors } from "../lib/colors"
 import { sendRaw } from "../services/api"
+import Error from "../components/Error"
 
 export default function UploadView() {
     const [error, setError] = useState<string | null>(null)
@@ -33,11 +34,9 @@ export default function UploadView() {
     }
 
     return (
-        <div className="w-full h-full">
-            <form
-                onSubmit={handleSubmit}
-                className="h-full flex flex-col space-y-2"
-            >
+        <div className="flex flex-col space-y-2">
+            {error && <Error message={error} />}
+            <form onSubmit={handleSubmit}>
                 <JSONUploader
                     errorCallback={handleError}
                     valueCallback={setValue}
@@ -50,7 +49,7 @@ export default function UploadView() {
                 {(!error && value) && <Input
                     type="submit"
                     value="Submit"
-                    className="cursor-pointer"
+                    className="cursor-pointer my-2"
                 />}
                 {processing && <Loading color={HexColors.WHITE} />}
             </form>

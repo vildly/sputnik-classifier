@@ -13,9 +13,9 @@ export default function JSONEditor({ errorCallback, valueCallback, value }: JSON
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => errorCallback && errorCallback(error), [error])
-    useEffect(() => handleValue(), [value])
+    useEffect(() => parseValue(), [value])
 
-    function handleValue() {
+    function parseValue(): void {
         try {
             JSON.parse(value)
             setError(null)
@@ -33,8 +33,7 @@ export default function JSONEditor({ errorCallback, valueCallback, value }: JSON
     function handleBlur(_: React.FocusEvent<HTMLTextAreaElement>): void {
         try {
             const parsed = JSON.parse(value)
-            const formatted = JSON.stringify(parsed, null, 2)
-            valueCallback(formatted)
+            valueCallback(JSON.stringify(parsed, null, 2))
             setError(null)
         } catch (err) {
             setError("Incorrect JSON format")
@@ -42,11 +41,8 @@ export default function JSONEditor({ errorCallback, valueCallback, value }: JSON
     }
 
     return (
-        <div className="h-full flex flex-col space-y-2">
-            <Label
-                label={error ? error : "Edit JSON"}
-                className={cn(error && "text-red-500")}
-            />
+        <div className="flex flex-col">
+            <Label label="Edit JSON" />
             <Textarea
                 value={value}
                 onBlur={handleBlur}

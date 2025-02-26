@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import Input from "./Input"
 import Label from "./Label"
-import { cn } from "../lib/utils"
 
 interface JSONUploaderProps {
     errorCallback?: (error: string | null) => void
@@ -43,11 +42,8 @@ export default function JSONUploader({ errorCallback, valueCallback }: JSONUploa
     }
 
     return (
-        <div className="flex flex-col space-y-2">
-            <Label
-                label={error ? error : "Upload JSON"}
-                className={cn(error && "text-red-500")}
-            />
+        <div className="flex flex-col">
+            <Label label="Upload JSON" />
             <Input
                 type="file"
                 accept="application/json"
