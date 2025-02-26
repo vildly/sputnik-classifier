@@ -4,7 +4,7 @@ import JSONEditor from "./JSONEditor"
 import Input from "./Input"
 import Loading from "./Loading"
 import { HexColors } from "../lib/colors"
-import { request } from "../services/api"
+import { sendRaw } from "../services/api"
 
 export default function JSONForm() {
     const [error, setError] = useState<string | null>(null)
@@ -24,9 +24,8 @@ export default function JSONForm() {
         if (processing) return
 
         setProcessing(true)
-        // TODO: Handle the response here
-        request(value)
-        console.log(`Submitted: ${value}`)
+        sendRaw(value)
+        console.log(`Sent raw: ${value}`)
 
         // Reset
         setValue("")
