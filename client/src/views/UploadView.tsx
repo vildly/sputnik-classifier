@@ -1,12 +1,12 @@
 import { useState } from "react"
-import JSONUploader from "./JSONUploader"
-import JSONEditor from "./JSONEditor"
-import Input from "./Input"
-import Loading from "./Loading"
+import JSONUploader from "../components/JSONUploader"
+import JSONEditor from "../components/JSONEditor"
+import Input from "../components/Input"
+import Loading from "../components/Loading"
 import { HexColors } from "../lib/colors"
 import { sendRaw } from "../services/api"
 
-export default function JSONForm() {
+export default function UploadView() {
     const [error, setError] = useState<string | null>(null)
     const [processing, setProcessing] = useState<boolean>(false)
     const [value, setValue] = useState<string>("")

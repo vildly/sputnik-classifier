@@ -1,20 +1,16 @@
-import ASCIIArt from "./components/ASCIIArt"
-import JSONForm from "./components/JSONForm"
-import { HexColors } from "./lib/colors"
-
-const ascii = [
-String.raw`.______.....______...__..__.....______...__...__.....__.....__..__....`,
-String.raw`/\..___\.../\..==.\./\.\/\.\.../\__.._\./\."-.\.\.../\.\.../\.\/./....`,
-String.raw`\.\___..\..\.\.._-/.\.\.\_\.\..\/_/\.\/.\.\.\-...\..\.\.\..\.\.._"-...`,
-String.raw`.\/\_____\..\.\_\....\.\_____\....\.\_\..\.\_\\"\_\..\.\_\..\.\_\.\_\.`,
-String.raw`..\/_____/...\/_/.....\/_____/.....\/_/...\/_/.\/_/...\/_/...\/_/\/_/.`,
-]
+import Banner from "./components/Banner"
+import InspectView from "./views/InspectView"
+import UploadView from "./views/UploadView"
 
 export default function App() {
     return (
-        <div className="w-full max-w-xl p-4 h-screen mx-auto py-6 flex flex-col items-center">
-            <ASCIIArt art={ascii} bgPattern={new RegExp(/\./g)} bgColor={HexColors.BLACK} />
-            <JSONForm />
+        <div className="w-full max-w-xl p-4 h-screen mx-auto py-6 flex flex-col space-y-6">
+            <Banner
+                text="SPUTNIK"
+                className="max-w-fit"
+            />
+            <InspectView />
+            <UploadView />
         </div>
     )
 }
