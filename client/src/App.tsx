@@ -1,6 +1,5 @@
 import ASCIIArt from "./components/ASCIIArt"
 import JSONForm from "./components/JSONForm"
-import Loading from "./components/Loading"
 import { HexColors } from "./lib/colors"
 
 const ascii = [
