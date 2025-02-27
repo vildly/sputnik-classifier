@@ -4,5 +4,8 @@ The text classifier
 
 ## Architecture
 
-![architecture](./architecture.png)
+![architecture](./.readme/architecture.png)
 
+## Flow
+
+![experiment flow](./.readme/flow.png)
