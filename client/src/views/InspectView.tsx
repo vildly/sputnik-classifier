@@ -23,7 +23,6 @@ export default function InspectView() {
             setProcessing(true)
             const res = await getData(id)
             if (!res || typeof res !== "object") {
-                console.info(res)
                 throw new Error("Could not parse the response")
             }
             setData(JSON.stringify(res, null, 2))
