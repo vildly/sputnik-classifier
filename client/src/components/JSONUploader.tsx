@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react"
 import Input from "./Input"
 import { StrictJSON } from "../lib/json"
+import { cn } from "../lib/utils"
 
 interface JSONUploaderProps {
     errorCallback?: (error: string | null) => void
-    valueCallback: (value: string) => void
+    onChange: (value: string) => void
 }
 
-export default function JSONUploader({ errorCallback, valueCallback }: JSONUploaderProps) {
+export default function JSONUploader({ errorCallback, onChange }: JSONUploaderProps) {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => errorCallback && errorCallback(error), [error])
@@ -22,19 +23,21 @@ export default function JSONUploader({ errorCallback, valueCallback }: JSONUploa
                 const fileContent = reader.result
                 if (typeof fileContent === "string") {
                     try {
-                        const parsed = StrictJSON.parse(fileContent)
-                        const formatted = JSON.stringify(parsed, null, 2)
-                        valueCallback(formatted)
+                        // Validate that it is JSON before changing value
+                        if (!StrictJSON.validator(fileContent, setError)) return
+                        onChange(JSON.stringify(JSON.parse(fileContent), null, 2))
                         setError(null)
                     } catch(err: any) {
-                        valueCallback(fileContent)
                         setError(err.message)
                     }
                 }
             }
 
             reader.onerror = () => {
-                setError("Error reading file")
+                const err = reader.error
+                    ? reader.error.message
+                    : "FileReader: unknown error occurred"
+                setError(err)
             }
 
             reader.readAsText(file)
@@ -46,7 +49,10 @@ export default function JSONUploader({ errorCallback, valueCallback }: JSONUploa
             type="file"
             accept="application/json"
             onChange={handleFileChange}
-            className="cursor-pointer"
+            className={cn(
+                error && "bg-red-500",
+                "cursor-pointer"
+            )}
         />
     )
 }

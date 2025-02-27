@@ -1,28 +1,11 @@
-import { useEffect, useState } from "react"
 import { cn } from "../lib/utils"
 
-interface JSONViewerProps {
-    data: Record<string, any>
-    errorCallback?: (error: string | null) => void
+interface PreViewerProps {
+    value: string
     className?: string
 }
 
-export default function JSONViewer({ data, errorCallback, className }: JSONViewerProps) {
-    const [error, setError] = useState<string | null>(null)
-    const [formatted, setFormatted] = useState<string>("")
-
-    useEffect(() => errorCallback && errorCallback(error), [error])
-    useEffect(() => handleDataChange(), [data])
-
-    function handleDataChange() {
-        try {
-            setFormatted(JSON.stringify(data, null, 2))
-            setError(null)
-        } catch(err: any) {
-            setError(err.message)
-        }
-    }
-
+export default function PreViewer({ value, className }: PreViewerProps) {
     return (
         <div className={cn(
             "p-2",
@@ -32,7 +15,7 @@ export default function JSONViewer({ data, errorCallback, className }: JSONViewe
             "max-h-screen overflow-auto",
             className)}
         >
-            <pre className={cn(className)}>{formatted}</pre>
+            <pre className={className}>{value}</pre>
         </div>
     )
 }

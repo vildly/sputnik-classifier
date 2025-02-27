@@ -13,6 +13,7 @@ export default function Error({ message, className }: ErrorProps) {
                 "border border-red-500 rounded-md",
                 "p-2",
                 "text-white",
+                "overflow-auto",
                 className
             )}
         >{message}</div>

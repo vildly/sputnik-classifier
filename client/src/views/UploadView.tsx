@@ -1,26 +1,28 @@
 import { useState } from "react"
 import JSONUploader from "../components/JSONUploader"
-import JSONEditor from "../components/JSONEditor"
 import Input from "../components/Input"
 import Loading from "../components/Loading"
 import { HexColors } from "../lib/colors"
 import { sendRaw } from "../services/api"
 import Error from "../components/Error"
 import Form from "../components/Form"
+import { StrictJSON } from "../lib/json"
 
 export default function UploadView() {
     const [error, setError] = useState<string | null>(null)
     const [processing, setProcessing] = useState<boolean>(false)
     const [value, setValue] = useState<string>("")
+    const [isValidValue, setIsValidValue] = useState<boolean>(false)
 
-    function handleError(error: string | null): void {
-        setError(error)
+    function handleValue(value: string): void {
+        setIsValidValue(StrictJSON.validator(value, setError))
+        setValue(value)
     }
 
     function handleSubmit(): void {
         // Prevent incorrect JSON
-        if (error) return
-        // Prevent re-entry
+        if (!isValidValue) return
+        // Prevent re-submission
         if (processing) return
 
         setProcessing(true)
@@ -28,6 +30,7 @@ export default function UploadView() {
 
         // Reset
         setValue("")
+        setError(null)
         setProcessing(false)
     }
 
@@ -36,18 +39,13 @@ export default function UploadView() {
             {error && <Error message={error} />}
             <Form onSubmit={handleSubmit}>
                 <JSONUploader
-                    errorCallback={handleError}
-                    valueCallback={setValue}
+                    errorCallback={setError}
+                    onChange={handleValue}
                 />
-                {value && <JSONEditor
-                    errorCallback={handleError}
-                    valueCallback={setValue}
-                    value={value}
-                />}
-                {(!error && value) && <Input
+                {(!processing && isValidValue) && <Input
                     type="submit"
                     value="Submit"
-                    className="cursor-pointer my-2"
+                    className="cursor-pointer"
                 />}
                 {processing && <Loading color={HexColors.WHITE} />}
             </Form>
