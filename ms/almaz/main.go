@@ -67,21 +67,28 @@ func main() {
 	r := mux.NewRouter()
 
 	// Authentication routes (outside the API group)
-	r.HandleFunc("/login", handlers.LoginHandler).Methods(http.MethodPost)
-	r.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)
+	// r.HandleFunc("/login", handlers.LoginHandler).Methods(http.MethodPost)
+	// r.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)
+	// r.HandleFunc("/users/{username}", handlers.RemoveUserHandler).Methods(http.MethodDelete)
+	r.HandleFunc("/data", handlers.GetDataHandler).Methods(http.MethodGet)
+	r.HandleFunc("/data/{id}", handlers.GetDataByIDHandler).Methods(http.MethodGet)
+	r.HandleFunc("/data", handlers.CreateDataHandler).Methods(http.MethodPost)
+	r.HandleFunc("/data/{id}", handlers.UpdateDataHandler).Methods(http.MethodPut)
+	r.HandleFunc("/data/{id}", handlers.PatchDataHandler).Methods(http.MethodPatch)
+	r.HandleFunc("/data/{id}", handlers.DeleteDataHandler).Methods(http.MethodDelete)
 
 	// API version 1 group
 	apiV1 := r.PathPrefix("/api/v1").Subrouter()
 	apiV1.Use(middleware.JWTMiddleware)
 
-	apiV1.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)
-	apiV1.HandleFunc("/users/{username}", handlers.RemoveUserHandler).Methods(http.MethodDelete)
-	apiV1.HandleFunc("/data", handlers.GetDataHandler).Methods(http.MethodGet)
-	apiV1.HandleFunc("/data/{id}", handlers.GetDataByIDHandler).Methods(http.MethodGet)
-	apiV1.HandleFunc("/data", handlers.CreateDataHandler).Methods(http.MethodPost)
-	apiV1.HandleFunc("/data/{id}", handlers.UpdateDataHandler).Methods(http.MethodPut)
-	apiV1.HandleFunc("/data/{id}", handlers.PatchDataHandler).Methods(http.MethodPatch)
-	apiV1.HandleFunc("/data/{id}", handlers.DeleteDataHandler).Methods(http.MethodDelete)
+	// apiV1.HandleFunc("/users", handlers.RegisterUserHandler).Methods(http.MethodPost)
+	// apiV1.HandleFunc("/users/{username}", handlers.RemoveUserHandler).Methods(http.MethodDelete)
+	// apiV1.HandleFunc("/data", handlers.GetDataHandler).Methods(http.MethodGet)
+	// apiV1.HandleFunc("/data/{id}", handlers.GetDataByIDHandler).Methods(http.MethodGet)
+	// apiV1.HandleFunc("/data", handlers.CreateDataHandler).Methods(http.MethodPost)
+	// apiV1.HandleFunc("/data/{id}", handlers.UpdateDataHandler).Methods(http.MethodPut)
+	// apiV1.HandleFunc("/data/{id}", handlers.PatchDataHandler).Methods(http.MethodPatch)
+	// apiV1.HandleFunc("/data/{id}", handlers.DeleteDataHandler).Methods(http.MethodDelete)
 
 	// Swagger documentation (using relative URL)
 	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(

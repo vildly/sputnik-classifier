@@ -6,6 +6,7 @@ import Loading from "../components/Loading"
 import { HexColors } from "../lib/colors"
 import { sendRaw } from "../services/api"
 import Error from "../components/Error"
+import Form from "../components/Form"
 
 export default function UploadView() {
     const [error, setError] = useState<string | null>(null)
@@ -16,9 +17,7 @@ export default function UploadView() {
         setError(error)
     }
 
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
-        // Prevent default behaviour
-        e.preventDefault()
+    function handleSubmit(): void {
         // Prevent incorrect JSON
         if (error) return
         // Prevent re-entry
@@ -26,7 +25,6 @@ export default function UploadView() {
 
         setProcessing(true)
         sendRaw(value)
-        console.log(`Sent raw: ${value}`)
 
         // Reset
         setValue("")
@@ -36,7 +34,7 @@ export default function UploadView() {
     return (
         <div className="flex flex-col space-y-2">
             {error && <Error message={error} />}
-            <form onSubmit={handleSubmit}>
+            <Form onSubmit={handleSubmit}>
                 <JSONUploader
                     errorCallback={handleError}
                     valueCallback={setValue}
@@ -52,7 +50,7 @@ export default function UploadView() {
                     className="cursor-pointer my-2"
                 />}
                 {processing && <Loading color={HexColors.WHITE} />}
-            </form>
+            </Form>
         </div>
     )
 }

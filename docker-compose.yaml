@@ -19,28 +19,28 @@ services:
       RABBITMQ_URI: "amqp://rabbitmq:5672"
       RABBITMQ_QUEUE: "test"
 
-  # # GO API
-  # almaz:
-  #   container_name: almaz
-  #   build:
-  #     context: ./ms/almaz/
-  #     dockerfile: Dockerfile
-  #   networks:
-  #     - net
-  #   ports:
-  #     # Make sure this matches with the environment variable
-  #     - "5000:80"
-  #   depends_on:
-  #     - mongodb
-  #   environment:
-  #     # Hostname must match with the container_name of mongo
-  #     MONGODB_URI: "mongodb://mongodb:27017"
-  #     PORT: 80
-  #     SECRET: "SUPERSECRETKEYSHOULDNTBEHERE"
-  #     # Uncomment these if exposing the API outwards directly:
-  #     # TLS_KEY_FILE:
-  #     # TLS_CERT_FILE:
-  #     # TLS_PORT:
+  # GO API
+  almaz:
+    container_name: almaz
+    build:
+      context: ./ms/almaz/
+      dockerfile: Dockerfile
+    networks:
+      - net
+    ports:
+      # Make sure this matches with the environment variable
+      - "5000:80"
+    depends_on:
+      - mongodb
+    environment:
+      # Hostname must match with the container_name of mongo
+      MONGODB_URI: "mongodb://mongodb:27017"
+      PORT: 80
+      SECRET: "SUPERSECRETKEYSHOULDNTBEHERE"
+      # Uncomment these if exposing the API outwards directly:
+      # TLS_KEY_FILE:
+      # TLS_CERT_FILE:
+      # TLS_PORT:
 
   mongodb:
     container_name: mongodb

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import Input from "./Input"
-import Label from "./Label"
+import { StrictJSON } from "../lib/json"
 
 interface JSONUploaderProps {
     errorCallback?: (error: string | null) => void
@@ -22,13 +22,13 @@ export default function JSONUploader({ errorCallback, valueCallback }: JSONUploa
                 const fileContent = reader.result
                 if (typeof fileContent === "string") {
                     try {
-                        const parsed = JSON.parse(fileContent)
+                        const parsed = StrictJSON.parse(fileContent)
                         const formatted = JSON.stringify(parsed, null, 2)
                         valueCallback(formatted)
                         setError(null)
-                    } catch (err) {
+                    } catch(err: any) {
                         valueCallback(fileContent)
-                        setError("Invalid JSON file")
+                        setError(err.message)
                     }
                 }
             }
@@ -42,14 +42,11 @@ export default function JSONUploader({ errorCallback, valueCallback }: JSONUploa
     }
 
     return (
-        <div className="flex flex-col">
-            <Label label="Upload JSON" />
-            <Input
-                type="file"
-                accept="application/json"
-                onChange={handleFileChange}
-                className="cursor-pointer"
-            />
-        </div>
+        <Input
+            type="file"
+            accept="application/json"
+            onChange={handleFileChange}
+            className="cursor-pointer"
+        />
     )
 }

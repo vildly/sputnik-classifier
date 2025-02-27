@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
-import Label from "./Label"
 import Textarea from "./Textarea"
 import { cn } from "../lib/utils"
+import { StrictJSON } from "../lib/json"
 
 interface JSONEditorProps {
     errorCallback?: (error: string | null) => void
@@ -17,10 +17,10 @@ export default function JSONEditor({ errorCallback, valueCallback, value }: JSON
 
     function parseValue(): void {
         try {
-            JSON.parse(value)
+            StrictJSON.parse(value)
             setError(null)
-        } catch (err) {
-            setError("Incorrect JSON format")
+        } catch(err: any) {
+            setError(err.message)
         }
     }
 
@@ -32,23 +32,20 @@ export default function JSONEditor({ errorCallback, valueCallback, value }: JSON
     // When the textarea loses focus, try to parse and reformat the JSON
     function handleBlur(_: React.FocusEvent<HTMLTextAreaElement>): void {
         try {
-            const parsed = JSON.parse(value)
+            const parsed = StrictJSON.parse(value)
             valueCallback(JSON.stringify(parsed, null, 2))
             setError(null)
-        } catch (err) {
-            setError("Incorrect JSON format")
+        } catch(err: any) {
+            setError(err.message)
         }
     }
 
     return (
-        <div className="flex flex-col">
-            <Label label="Edit JSON" />
-            <Textarea
-                value={value}
-                onBlur={handleBlur}
-                onChange={handleChange}
-                className={cn(error && "border-red-500")}
-            />
-        </div>
+        <Textarea
+            value={value}
+            onBlur={handleBlur}
+            onChange={handleChange}
+            className={cn(error && "border-red-500")}
+        />
     )
 }
