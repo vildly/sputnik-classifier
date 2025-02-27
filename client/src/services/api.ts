@@ -1,33 +1,31 @@
+import { StrictJSON } from "../lib/json"
+
 const domain = "http://localhost:5000"
 
-export async function handlePromiseState<T>(promise: Promise<T>, setData: (data: T) => void, setError: (error: string | null) => void): Promise<void> {
-    try {
-        const result = await promise
-        setData(result)
-    } catch (err: any) {
-        setError(err.message)
-    }
-}
-
-export async function sendRaw(data: string): Promise<void> {
-    const res = await fetch(`${domain}/data`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(data)
-    })
-    let body: string | null = null
-    const contentType = res.headers.get("content-type")
-    if (contentType && contentType.match(/text\/plain/)) {
-        body = await res.text()
-    }
-    if (body && !res.ok) {
-        throw new Error(`${res.status} ${res.statusText} | ${body}`)
-    }
+function check(res: Response): void {
     if (!res.ok) {
         throw new Error(`${res.status} ${res.statusText}`)
     }
+}
 
-    console.info(`${res.status} ${res.statusText} | ${body}`)
+export async function sendRaw(json: string): Promise<string | null> {
+    // Validate argument
+    if (!StrictJSON.validator(json)) {
+        throw new Error("Invalid JSON, must be enclosed by {} and have at least on key")
+    }
+
+    const res = await fetch(`${domain}/data`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // No need to stringify here as it should already be JSON
+        body: json
+    })
+
+    check(res)
+
+    const contenttype = res.headers.get("content-type")
+    if (contenttype && contenttype.match(/text\/plain/)) return res.text()
+    return null
 }
 
 // TODO: Add return interface here when I know the return type fully
@@ -36,17 +34,11 @@ export async function getData(id: string): Promise<any> {
         method: "GET",
         headers: { "content-type": "application/json" },
     })
-    let body: string | null = null
-    const contentType = res.headers.get("content-type")
-    if (contentType && contentType.match(/text\/plain/)) {
-        body = await res.text()
-    }
-    if (body && !res.ok) {
-        throw new Error(`${res.status} ${res.statusText} | ${body}`)
-    }
-    if (!res.ok) {
-        throw new Error(`${res.status} ${res.statusText}`)
-    }
+
+    check(res)
+
+    const contenttype = res.headers.get("content-type")
+    if (contenttype && contenttype.match(/text\/plain/)) return res.text()
 
     return res.json()
 }

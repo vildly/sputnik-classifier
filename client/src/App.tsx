@@ -9,8 +9,8 @@ export default function App() {
                 text="SPUTNIK"
                 className="max-w-fit"
             />
-            <InspectView />
             <UploadView />
+            <InspectView />
         </div>
     )
 }

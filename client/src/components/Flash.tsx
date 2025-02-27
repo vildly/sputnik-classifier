@@ -1,21 +1,23 @@
 import { cn } from "../lib/utils"
 
-interface ErrorProps {
+interface FlashProps {
     message: string
     className?: string
 }
 
-export default function Error({ message, className }: ErrorProps) {
+export default function Flash({ message, className }: FlashProps) {
     return (
         <div
             className={cn(
-                "bg-red-800",
-                "border border-red-500 rounded-md",
+                "bg-neutral-800",
+                "border border-neutral-500 rounded-md",
                 "p-2",
                 "text-white",
                 "overflow-auto",
                 className
             )}
-        >{message}</div>
+        >
+            {message}
+        </div>
     )
 }

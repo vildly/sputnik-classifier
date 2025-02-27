@@ -1,16 +1,21 @@
 import { HexColors } from "../lib/colors"
+import { cn } from "../lib/utils"
 
 interface LoadingProps {
     color?: HexColors
     size?: number
+    className?: string
 }
 
-export default function Loading({ color = HexColors.BLACK, size = 24 }: LoadingProps) {
+export default function Loading({ color = HexColors.BLACK, size = 24, className }: LoadingProps) {
     // Render an SVG spinner that rotates using Tailwind's animate-spin class
     return (
         <svg
-            className="animate-spin"  // Applies the spinning animation
-            style={{ width: size, height: size }}  // Sets the SVG's width and height based on the size prop
+            // Put the className prop before spin to ensure this property
+            // cant be changed
+            className={cn(className, "animate-spin")}
+            // Sets the SVG's width and height based on the size prop
+            style={{ width: size, height: size }}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

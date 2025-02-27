@@ -4,51 +4,55 @@ import Input from "../components/Input"
 import Loading from "../components/Loading"
 import { HexColors } from "../lib/colors"
 import { sendRaw } from "../services/api"
-import Error from "../components/Error"
 import Form from "../components/Form"
-import { StrictJSON } from "../lib/json"
+import Flash from "../components/Flash"
 
 export default function UploadView() {
-    const [error, setError] = useState<string | null>(null)
+    const [flash, setFlash] = useState<string>("")
+    const [error, setError] = useState<string>("")
     const [processing, setProcessing] = useState<boolean>(false)
     const [value, setValue] = useState<string>("")
-    const [isValidValue, setIsValidValue] = useState<boolean>(false)
 
-    function handleValue(value: string): void {
-        setIsValidValue(StrictJSON.validator(value, setError))
-        setValue(value)
-    }
+    async function handleSubmit(): Promise<void> {
+        try {
+            // Prevent if no value
+            if (!value) return
+            // Prevent re-submission
+            if (processing) return
 
-    function handleSubmit(): void {
-        // Prevent incorrect JSON
-        if (!isValidValue) return
-        // Prevent re-submission
-        if (processing) return
+            setProcessing(true)
+            const res = await sendRaw(value)
+            if (res && typeof res === "string") {
+                setFlash(res)
+            }
 
-        setProcessing(true)
-        sendRaw(value)
-
-        // Reset
-        setValue("")
-        setError(null)
-        setProcessing(false)
+            // Reset
+            setError("")
+            setValue("")
+            setProcessing(false)
+        } catch(err: any) {
+            setError(err.message)
+            setProcessing(false)
+        }
     }
 
     return (
         <div className="flex flex-col space-y-2">
-            {error && <Error message={error} />}
-            <Form onSubmit={handleSubmit}>
+            {flash && <Flash message={flash} />}
+            {error && <Flash message={error} className="bg-red-900 border-red-400" />}
+            <Form onSubmit={handleSubmit} className="flex-row">
                 <JSONUploader
-                    errorCallback={setError}
-                    onChange={handleValue}
+                    onChange={setValue}
+                    onError={setError}
+                    className="w-full"
                 />
-                {(!processing && isValidValue) && <Input
+                {!processing && value && <Input
                     type="submit"
                     value="Submit"
                     className="cursor-pointer"
                 />}
-                {processing && <Loading color={HexColors.WHITE} />}
             </Form>
+            {processing && <Loading color={HexColors.WHITE} className="mx-auto" />}
         </div>
     )
 }
