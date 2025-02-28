@@ -43,7 +43,7 @@ export default function JSONUploader({ onChange, onError, className }: JSONUploa
             type="file"
             accept="application/json"
             onChange={handleFileChange}
-            className={cn(className)}
+            className={cn("cursor-pointer", className)}
         />
     )
 }
