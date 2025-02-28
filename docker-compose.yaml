@@ -3,6 +3,18 @@
 # internal ms: 400X
 # external ms: 500X
 services:
+  app:
+    container_name: app
+    # Specifies that Docker should build the image using a "Dockerfile" file in
+    # the current directory.
+    build:
+      context: ./client/
+      dockerfile: Dockerfile
+    networks:
+      - net
+    ports:
+      - "80:80"
+
   # Python preprocessor
   mir:
     container_name: mir
