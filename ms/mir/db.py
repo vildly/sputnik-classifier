@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 from pylo import get_logger
 
@@ -56,7 +56,7 @@ def update_by_id(
     doc_id: Union[str, ObjectId],
     update_data: dict,
     upsert: bool = False,
-    operator: str = "$set",
+    operator: Literal["$set", "$push", "$inc", "$unset"] = "$set",
 ) -> UpdateResult:
     try:
         # Convert doc_id to an ObjectId if it is provided as a string
