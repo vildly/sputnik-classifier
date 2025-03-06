@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from db import connect_to_database
 from clean import get_dependencies
-from openrouter import request
+from openrouter import chat
 from pylo import get_logger
 from dotenv import load_dotenv
 
@@ -94,7 +94,7 @@ try:
 
     @app.post("/")
     def post_root(body: RootModel):
-        res = request(model=body.model, prompt=body.prompt)
+        res = chat(model=body.model, prompt=body.prompt)
         return JSONResponse(status_code=201, content={"job": res})
 
 

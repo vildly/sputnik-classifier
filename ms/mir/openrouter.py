@@ -8,9 +8,9 @@ from pylo import get_logger
 logger = get_logger()
 
 
-def request(model: str, prompt: str) -> str:
-    logger.info(model)
-    logger.info(prompt)
+def chat(model: str, prompt: str) -> str:
+    logger.info(f"OR-Model: {model}")
+    logger.info(f"OR-Prompt: {prompt}")
 
     response = requests.post(
         url="https://openrouter.ai/api/v1/chat/completions",
@@ -25,12 +25,16 @@ def request(model: str, prompt: str) -> str:
         }),
     )
 
-    logger.info(response.status_code)
-    if not response.ok:
+    content_type = response.headers.get("Content-Type", "")
+    if "application/json" in content_type:
+        body = response.json()
+    else:
         body = response.text
-        logger.warning(body)
-        raise ValueError(f"OR: {body}")
 
-    json_serialized_response = json.dumps(response.json(), indent=4)
-    logger.info(json_serialized_response)
-    return json_serialized_response
+    logger.info(f"OR-Status: {response.status_code}")
+    if not response.ok:
+        message = f"OR-Exc:{body}"
+        logger.warning(message)
+        raise ValueError(message)
+
+    return body
