@@ -3,11 +3,12 @@ import os
 import time
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from db import connect_to_database
+from db import add_one, connect_to_database, get_collection, update_by_id
 from clean import get_dependencies
 from openrouter import chat
 from pylo import get_logger
@@ -39,7 +40,7 @@ def _process_error(exc) -> JSONResponse:
 
 try:
     # get_dependencies()
-    # connect_to_database(connection_string=os.getenv("MONGODB_URI"))
+    connect_to_database(connection_string=os.getenv("MONGODB_URI"))
     app = FastAPI()
 
     # Cross-Origin Resource Sharing (CORS) Middleware
@@ -94,8 +95,22 @@ try:
 
     @app.post("/")
     def post_root(body: RootModel):
+        col = get_collection(db="jobs", collection="v1")
+        job = add_one(
+            col=col,
+            data={
+                "raw": "",
+                "pre": "",
+                "prompt": body.prompt,
+                "model": body.model,
+                "model_res": "",
+            },
+        )
+
         res = chat(model=body.model, prompt=body.prompt)
-        return JSONResponse(status_code=201, content={"job": res})
+        update_by_id(col=col, doc_id=job.inserted_id, update_data={"model_res": res})
+
+        return JSONResponse(status_code=201, content={"job": str(job.inserted_id)})
 
 
 except Exception as exc:
