@@ -1,7 +1,24 @@
 from typing import List
 import json
+import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer, word_tokenize
+
+
+def get_dependencies() -> None:
+    # Important as NLTK searches in these directories:
+    # - $HOME/nltk_data
+    # - $HOME/<path-to-project>/.venv/nltk_data
+    # - $HOME/<path-to-project>/.venv/share/nltk_data
+    # - $HOME/<path-to-project>/.venv/lib/nltk_data
+    # - /usr/share/nltk_data
+    # - /usr/local/share/nltk_data
+    # - /usr/lib/nltk_data
+    # - /usr/local/lib/nltk_data
+    download_dir = "./.venv/lib/nltk_data"
+    nltk.download("stopwords", download_dir=download_dir)
+    nltk.download("punkt_tab", download_dir=download_dir)
+    nltk.download("punkt", download_dir=download_dir)
 
 
 def _load_json(file_path) -> dict:
@@ -41,12 +58,14 @@ def _remove_stop_words(text: str, spacer: str = "", language: str = "english") -
 
 def _remove_symbols(text: str, spacer: str = "") -> str:
     # Match word characters (letters, digits and underscores)
-    tokenizer = RegexpTokenizer(r'\w+')
+    tokenizer = RegexpTokenizer(r"\w+")
     tokens = tokenizer.tokenize(text)
     return spacer.join(tokens)
 
 
-def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language: str = "english") -> None:
+def filter_data(
+    in_file_path: str, out_file_path: str, keys: List[str], language: str = "english"
+) -> None:
     """
     Use this script to clean (pre-process) data from a JSON file.
     The output file will contain a list of objects with only the keys provided.
@@ -81,11 +100,7 @@ def filter_data(in_file_path: str, out_file_path: str, keys: List[str], language
                 spacer=" ",
             )
 
-            cur_obj = _remove_stop_words(
-                text=cur_obj,
-                spacer=" ",
-                language=language
-            )
+            cur_obj = _remove_stop_words(text=cur_obj, spacer=" ", language=language)
 
             # If the pre-processing has removed all content then
             # simply continue and skip adding the object to the list
