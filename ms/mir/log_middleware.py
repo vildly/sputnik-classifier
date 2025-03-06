@@ -1,4 +1,4 @@
-# error_middleware.py
+# log_middleware.py
 import time
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -33,19 +33,21 @@ class LogRequestsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
         start_time = time.time()
 
-        # Log request details
+        # Log request info
         client_ip = request.client.host if request.client else "missing"
         logger.info(f"IP: {client_ip}")
         logger.info(f"Method: {request.method} {request.url.path}")
 
         try:
+            # Process the request
             response = await call_next(request)
         except Exception as exc:
-            # If an exception occurs, process it using the _process_error function.
             return _process_error(exc)
 
-        # Calculate and log processing time
+        # Calculate processing time
         process_time = (time.time() - start_time) * 1000
+
+        # Log response info and process time
         logger.info(f"Status: {response.status_code}")
         logger.info(f"Time: {process_time:.2f}ms")
 

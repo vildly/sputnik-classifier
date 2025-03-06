@@ -56,11 +56,12 @@ def update_by_id(
     doc_id: Union[str, ObjectId],
     update_data: dict,
     upsert: bool = False,
+    operator: str = "$set",
 ) -> UpdateResult:
     try:
         # Convert doc_id to an ObjectId if it is provided as a string
         oid = doc_id if isinstance(doc_id, ObjectId) else ObjectId(doc_id)
-        result = col.update_one({"_id": oid}, {"$set": update_data}, upsert=upsert)
+        result = col.update_one({"_id": oid}, {operator: update_data}, upsert=upsert)
         logger.info(f"MONGO: Updated: {str(oid)}")
         logger.info(f"MONGO: Matches: {result.matched_count}")
         logger.info(f"MONGO: Modified: {result.modified_count}")

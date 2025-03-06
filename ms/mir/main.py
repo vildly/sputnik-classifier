@@ -1,41 +1,32 @@
 # main.py
-import os
-import time
+from typing import List
 
-from fastapi import FastAPI, Request
-from fastapi.encoders import jsonable_encoder
+import os
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from db import add_one, connect_to_database, get_collection, update_by_id
 from clean import get_dependencies
+from log_middleware import LogRequestsMiddleware
 from openrouter import chat
 from pylo import get_logger
 from dotenv import load_dotenv
 
 
-# Loading the env before getting logger if any variables have been
-# set for it!
+# See:
+# https://openrouter.ai/models?max_price=0
+MODELS: List[str] = [
+    "google/gemini-2.0-pro-exp-02-05:free",
+    "deepseek/deepseek-r1:free",
+]
+
+
+# Loading the env before getting logger if any variables have been set for it!
 load_dotenv()
 logger = get_logger()
-
-
-def _process_error(exc) -> JSONResponse:
-    """
-    Process the error and return the appropriate response
-    """
-    # Log the error with stack trace
-    logger.error(f"server_exc={exc}")
-    logger.exception(exc)
-
-    # Return a JSON response:
-    if isinstance(exc, ValueError):
-        # Perhaps return a static string here?
-        return JSONResponse(status_code=400, content={"error": str(exc)})
-
-    # Default response for any other error
-    return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
 try:
@@ -43,12 +34,6 @@ try:
     connect_to_database(connection_string=os.getenv("MONGODB_URI"))
     app = FastAPI()
 
-    # Cross-Origin Resource Sharing (CORS) Middleware
-    #
-    # Adjust the "allow_origins" list to allow requests from specific domains,
-    # as * (all) allows requests from any domain.
-    #
-    # Update any methods and headers as needed!
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -56,59 +41,32 @@ try:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(LogRequestsMiddleware)
 
-    @app.middleware("http")
-    async def log_requests(request: Request, call_next):
-        """
-        Middleware to log requests and responses using "HTTP" log level
-        """
-        start_time = time.time()
-
-        # Log request info
-        client_ip = request.client.host if request.client else "missing"
-        logger.info(f"IP: {client_ip}")
-        logger.info(f"Method: {request.method} {request.url.path}")
-
-        try:
-            # Process the request
-            response = await call_next(request)
-        except Exception as exc:
-            return _process_error(exc)
-
-        # Calculate processing time
-        process_time = (time.time() - start_time) * 1000
-        formatted_process_time = f"{process_time:.2f}ms"
-
-        # Log response info and process time
-        logger.info(f"Status: {response.status_code}")
-        logger.info(f"Time: {formatted_process_time}")
-
-        return response
-
-    @app.get("/")
-    def get_root():
-        return JSONResponse(status_code=200, content={"hello": "world"})
-
-    class RootModel(BaseModel):
-        model: str
+    class JobModel(BaseModel):
+        raw: str
         prompt: str
 
     @app.post("/")
-    def post_root(body: RootModel):
+    def post_root(body: JobModel):
         col = get_collection(db="jobs", collection="v1")
         job = add_one(
             col=col,
-            data={
-                "raw": "",
-                "pre": "",
-                "prompt": body.prompt,
-                "model": body.model,
-                "model_res": "",
-            },
+            data={"raw": body.raw, "pre": "", "prompt": body.prompt, "models": []},
         )
 
-        res = chat(model=body.model, prompt=body.prompt)
-        update_by_id(col=col, doc_id=job.inserted_id, update_data={"model_res": res})
+        # TODO: Preprocess/clean "raw" data before passing it to the models and add it
+        # to the db
+
+        for model in MODELS:
+            # TODO: Use "pre" data here concatenated with the prompt
+            res = chat(model=model, prompt=body.prompt)
+            update_by_id(
+                col=col,
+                doc_id=job.inserted_id,
+                update_data={"models": {"$each": [{model: res}]}},
+                operator="$push",
+            )
 
         return JSONResponse(status_code=201, content={"job": str(job.inserted_id)})
 
