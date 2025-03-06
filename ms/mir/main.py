@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 
 # See:
-# https://openrouter.ai/models?max_price=0
+# https://openrouter.ai/models?max_price=0&order=top-weekly
 MODELS: List[str] = [
     "google/gemini-2.0-pro-exp-02-05:free",
     "deepseek/deepseek-r1:free",
