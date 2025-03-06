@@ -39,7 +39,7 @@ def _process_error(exc) -> JSONResponse:
 
 
 try:
-    # get_dependencies()
+    get_dependencies()
     connect_to_database(connection_string=os.getenv("MONGODB_URI"))
     app = FastAPI()
 
