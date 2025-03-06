@@ -1,29 +1,23 @@
 # main.py
+import os
 import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
-import nltk
+from db import connect_to_database
+from clean import get_dependencies
+from openrouter import request
 from pylo import get_logger
+from dotenv import load_dotenv
 
+
+# Loading the env before getting logger if any variables have been
+# set for it!
+load_dotenv()
 logger = get_logger()
-
-
-def _get_dependencies() -> None:
-    # Important as NLTK searches in these directories:
-    # - $HOME/nltk_data
-    # - $HOME/<path-to-project>/.venv/nltk_data
-    # - $HOME/<path-to-project>/.venv/share/nltk_data
-    # - $HOME/<path-to-project>/.venv/lib/nltk_data
-    # - /usr/share/nltk_data
-    # - /usr/local/share/nltk_data
-    # - /usr/lib/nltk_data
-    # - /usr/local/lib/nltk_data
-    download_dir = "./.venv/lib/nltk_data"
-    nltk.download("stopwords", download_dir=download_dir)
-    nltk.download("punkt_tab", download_dir=download_dir)
-    nltk.download("punkt", download_dir=download_dir)
 
 
 def _process_error(exc) -> JSONResponse:
@@ -44,7 +38,8 @@ def _process_error(exc) -> JSONResponse:
 
 
 try:
-    _get_dependencies()
+    # get_dependencies()
+    # connect_to_database(connection_string=os.getenv("MONGODB_URI"))
     app = FastAPI()
 
     # Cross-Origin Resource Sharing (CORS) Middleware
@@ -90,8 +85,17 @@ try:
         return response
 
     @app.get("/")
-    def hello():
+    def get_root():
         return JSONResponse(status_code=200, content={"hello": "world"})
+
+    class RootModel(BaseModel):
+        model: str
+        prompt: str
+
+    @app.post("/")
+    def post_root(body: RootModel):
+        res = request(model=body.model, prompt=body.prompt)
+        return JSONResponse(status_code=201, content={"job": res})
 
 
 except Exception as exc:

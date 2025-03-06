@@ -3,13 +3,15 @@ import requests
 import json
 
 from pylo import get_logger
-from dotenv import load_dotenv
 
 
 logger = get_logger()
-load_dotenv()
 
-if __name__ == "__main__":
+
+def request(model: str, prompt: str) -> str:
+    logger.info(model)
+    logger.info(prompt)
+
     response = requests.post(
         url="https://openrouter.ai/api/v1/chat/completions",
         headers={
@@ -18,11 +20,17 @@ if __name__ == "__main__":
             # "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
         },
         data=json.dumps({
-            "model": "google/gemini-2.0-pro-exp-02-05:free",
-            "messages": [{"role": "user", "content": "What is the meaning of life?"}],
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
         }),
     )
+
     logger.info(response.status_code)
-    # Pretty-print the JSON to the console
-    pretty_json = json.dumps(response.json(), indent=4)
-    logger.info(pretty_json)
+    if not response.ok:
+        body = response.text
+        logger.warning(body)
+        raise ValueError(f"OR: {body}")
+
+    json_serialized_response = json.dumps(response.json(), indent=4)
+    logger.info(json_serialized_response)
+    return json_serialized_response
