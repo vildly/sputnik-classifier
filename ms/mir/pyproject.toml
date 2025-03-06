@@ -1,7 +1,7 @@
 [project]
 name = "Mir"
 version = "0.1.0"
-description = "Python preprocessor"
+description = "A little bit of everything"
 authors = [
     {name = "Samuel Svensson", email = "ss225ze@student.lnu.se"},
     {name = "Andreas Nilsson", email = "an224qi@student.lnu.se"},
@@ -12,8 +12,6 @@ dependencies = [
   "python-dotenv>=1.0.1",
   "dnspython>=2.7.0",
   "pymongo>=4.11.1",
-  "aio-pika>=9.5.4",
-  "tenacity>=9.0.0",
   "fastapi[standard]>=0.115.11",
   "requests>=2.32.3"
 ]

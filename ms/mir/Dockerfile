@@ -44,18 +44,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Copy application source files into the final image
 COPY ./*.py /app/
 
-# Create the directory for NLTK data downloads as expected in your code
-# -p flag checks if the directory already exists
-RUN mkdir -p /app/.venv/lib/nltk_data
-
-# Pre-download required NLTK resources to avoid runtime downloads
-RUN python -c "import nltk; \
-  nltk.download('stopwords', download_dir='/app/.venv/lib/nltk_data'); \
-  nltk.download('punkt_tab', download_dir='/app/.venv/lib/nltk_data'); \
-  nltk.download('punkt', download_dir='/app/.venv/lib/nltk_data')"
-
 # Set the working directory for running the application
 WORKDIR /app
 
 # Set the default command/entrypoint for running your script
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["fastapi", "run"]
