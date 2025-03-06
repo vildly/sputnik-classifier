@@ -1,46 +1,50 @@
-# TODO: Update this to use Mir instead...
 ---
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: "almaz"
+  name: "mir"
   namespace: "default"
   labels:
-    app: "almaz"
+    app: "mir"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: "almaz"
+      app: "mir"
   template:
     metadata:
       labels:
-        app: "almaz"
+        app: "mir"
     spec:
       containers:
-      - name: "almaz-1"
-        image: "europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/almaz:latest"
+      - name: "mir-1"
+        image: "europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/mir:latest"
         env:
         - name: "MONGODB_URI"
           valueFrom:
             secretKeyRef:
               key: "MONGODB_URI"
               name: "gke-secrets"
+        - name: "OR_SECRET"
+          valueFrom:
+            secretKeyRef:
+              key: "OR_SECRET"
+              name: "gke-secrets"
 ---
 apiVersion: "autoscaling/v2"
 kind: "HorizontalPodAutoscaler"
 metadata:
-  name: "almaz-hpa"
+  name: "mir-hpa"
   namespace: "default"
   labels:
-    app: "almaz"
+    app: "mir"
 spec:
   scaleTargetRef:
     kind: "Deployment"
-    name: "almaz"
+    name: "mir"
     apiVersion: "apps/v1"
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 1
   metrics:
   - type: "Resource"
     resource:
@@ -52,15 +56,15 @@ spec:
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: "almaz-service"
+  name: "mir-service"
   namespace: "default"
   labels:
-    app: "almaz"
+    app: "mir"
 spec:
   ports:
   - protocol: "TCP"
-    port: 5000
-    targetPort: 80
+    port: 8000
+    targetPort: 8000
   selector:
-    app: "almaz"
+    app: "mir"
   type: "ClusterIP"
