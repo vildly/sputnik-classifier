@@ -71,16 +71,15 @@ try:
         # Concatenate the prompt to the data sent to the model
         data_doc["prompt"] = body.prompt
 
-        # Create tasks for the model calls concurrently.
-        # This assumes that the `chat` function is asynchronous.
-        tasks = [chat(model=model, prompt=str(data_doc)) for model in body.models]
+        # Create tasks that return a tuple (model, result)
+        tasks = []
+        for model in body.models:
+            task = asyncio.create_task(chat(model, str(data_doc)))
+            tasks.append(task)
 
-        # Wait for all model calls to finish concurrently.
-        # The responses list will contain the results in the same order as body.models.
-        responses = await asyncio.gather(*tasks)
-
-        # Update the job document for each model response
-        for model, res in zip(body.models, responses):
+        # As each task completes, update the job document.
+        for completed in asyncio.as_completed(tasks):
+            model, res = await completed
             update_by_id(
                 col=jobs_col,
                 doc_id=job_doc.inserted_id,
