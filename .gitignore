@@ -26,9 +26,19 @@ go.work.sum
 
 # folders
 **/*.vscode/
-**/*.vite/
-**/*node_modules/
-**/*dist/
+**/*data/
+
+# python
+**/*venv/
+**/*__pycache__/
+
+# logs
+**/*logs/
+**/*.log
+
+# pdm
+**/*.pdm-python
+**/*.python-version
 
 # Ignore generated kubeconfig from google-github-actions/get-gke-credentials
 gha-kubeconfig-*

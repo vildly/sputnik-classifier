@@ -13,7 +13,6 @@ on:
       - "**/*.yml"
       - "**/*.yaml"
       - "**/*.py"
-      - "**/*.go"
       - "**/Dockerfile"
 
 env:
@@ -40,7 +39,7 @@ jobs:
       id-token: "write"
     strategy:
       matrix:
-        image: [ "almaz", "mir" ]
+        image: [ "mir" ]
     steps:
     # IMPORTANT!
     # THIS MUST ALWAYS BE FIRST OTHERWISE IT
@@ -84,11 +83,11 @@ jobs:
     - name: Build ${{ matrix.image }} docker image
       run: |-
         docker build \
-          -f ms/${{ matrix.image }}/Dockerfile \
+          -f src/${{ matrix.image }}/Dockerfile \
           --tag "$GAR_ZONE-docker.pkg.dev/${{ secrets.GKE_PROJECT }}/$GAR_REPO/${{ matrix.image }}" \
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
-          ms/${{ matrix.image }}/
+          src/${{ matrix.image }}/
 
     # Push the Docker image to Google Container Registry
     - name: Publish
@@ -137,8 +136,8 @@ jobs:
 
     - name: Deploy
       run: |-
-        kubectl apply -f k8s/mongodb.yaml -f k8s/almaz.yaml
+        kubectl apply -f k8s/mongodb.yaml -f k8s/mir.yaml
 
     - name: Get pods
       run: |-
-        kubectl get pods
+        sleep 20 && kubectl get pods

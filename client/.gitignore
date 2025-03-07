@@ -1,8 +1,0 @@
-# folders
-**/*.vscode/
-**/*.vite/
-**/*node_modules/
-**/*dist/
-
-#files
-**/*.tsbuildinfo

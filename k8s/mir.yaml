@@ -1,0 +1,70 @@
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "mir"
+  namespace: "default"
+  labels:
+    app: "mir"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "mir"
+  template:
+    metadata:
+      labels:
+        app: "mir"
+    spec:
+      containers:
+      - name: "mir-1"
+        image: "europe-north1-docker.pkg.dev/charged-camera-450710-j1/northstar-repo/mir:latest"
+        env:
+        - name: "MONGODB_URI"
+          valueFrom:
+            secretKeyRef:
+              key: "MONGODB_URI"
+              name: "gke-secrets"
+        - name: "OR_SECRET"
+          valueFrom:
+            secretKeyRef:
+              key: "OR_SECRET"
+              name: "gke-secrets"
+---
+apiVersion: "autoscaling/v2"
+kind: "HorizontalPodAutoscaler"
+metadata:
+  name: "mir-hpa"
+  namespace: "default"
+  labels:
+    app: "mir"
+spec:
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "mir"
+    apiVersion: "apps/v1"
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+  - type: "Resource"
+    resource:
+      name: "cpu"
+      target:
+        type: "Utilization"
+        averageUtilization: 80
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "mir-service"
+  namespace: "default"
+  labels:
+    app: "mir"
+spec:
+  ports:
+  - protocol: "TCP"
+    port: 8000
+    targetPort: 8000
+  selector:
+    app: "mir"
+  type: "ClusterIP"
