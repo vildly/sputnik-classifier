@@ -1,7 +1,11 @@
 # main.py
-from typing import Union, Dict, List, Any
+from typing import List
 
 import os
+import json
+import asyncio
+
+from bson import json_util
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,18 +15,15 @@ from pydantic import BaseModel
 from pylo import get_logger
 from dotenv import load_dotenv
 
-from .db import add_one, connect_to_database, get_collection, update_by_id
-from .clean import clean_text_to_numpy, process_json_data
-from .log_middleware import LogRequestsMiddleware
+from .db import (
+    add_one,
+    connect_to_database,
+    find_by_id,
+    get_collection,
+    update_by_id,
+)
 from .openrouter import chat
-
-
-# See:
-# https://openrouter.ai/models?max_price=0&order=top-weekly
-MODELS: List[str] = [
-    "google/gemini-2.0-pro-exp-02-05:free",
-    "deepseek/deepseek-r1:free",
-]
+from .log_middleware import LogRequestsMiddleware
 
 
 # Loading the env before getting logger if any variables have been set for it!
@@ -43,47 +44,51 @@ try:
     )
     app.add_middleware(LogRequestsMiddleware)
 
+    @app.get("/")
+    def get_root(id: str):
+        job_col = get_collection(db="jobs", collection="v1")
+        job_doc = find_by_id(col=job_col, doc_id=id)
+        return JSONResponse(
+            status_code=200, content=json.loads(json_util.dumps(job_doc))
+        )
+
     class JobModel(BaseModel):
-        raw: Union[Dict[str, Any], List[Any]]
+        data_id: str
         prompt: str
+        models: List[str]
 
     @app.post("/")
-    def post_root(body: JobModel):
-        col = get_collection(db="jobs", collection="v1")
-        job = add_one(
-            col=col,
-            data={"raw": body.raw, "pre": "", "prompt": body.prompt, "models": []},
+    async def post_root(body: JobModel):
+        jobs_col = get_collection(db="jobs", collection="v1")
+        job_doc = add_one(
+            col=jobs_col,
+            data={"data_id": body.data_id, "prompt": body.prompt},
         )
 
-        # TODO: Preprocess/clean "raw" data before passing it to the models and add it
-        # to the db
-        pre = process_json_data(
-            json_input=body.raw, keys=["title", "description"], language="english"
-        )
-        numpy_arr = clean_text_to_numpy(pre)
-        # Convert the DataFrame 'pre' to a list of dictionaries.
-        # pre_serializable = pre.to_dict(orient="records")
-        logger.debug(pre)
-        logger.debug(numpy_arr)
+        # Prepare the data for the models:
+        data_col = get_collection(db="data", collection="v1")
+        data_doc = find_by_id(col=data_col, doc_id=body.data_id)
+        # Concatenate the prompt to the data sent to the model
+        data_doc["prompt"] = body.prompt
 
-        # update_by_id(
-        #     col=col,
-        #     doc_id=job.inserted_id,
-        #     update_data={"pre": pre_serializable},
-        #     operator="$push",
-        # )
+        # Create tasks for the model calls concurrently.
+        # This assumes that the `chat` function is asynchronous.
+        tasks = [chat(model=model, prompt=str(data_doc)) for model in body.models]
 
-        for model in MODELS:
-            # TODO: Use "pre" data here concatenated with the prompt
-            res = chat(model=model, prompt=body.prompt)
+        # Wait for all model calls to finish concurrently.
+        # The responses list will contain the results in the same order as body.models.
+        responses = await asyncio.gather(*tasks)
+
+        # Update the job document for each model response
+        for model, res in zip(body.models, responses):
             update_by_id(
-                col=col,
-                doc_id=job.inserted_id,
-                update_data={"models": {"$each": [{model: res}]}},
+                col=jobs_col,
+                doc_id=job_doc.inserted_id,
+                update_data={"model": {"$each": [{model: res}]}},
                 operator="$push",
             )
 
-        return JSONResponse(status_code=201, content={"job": str(job.inserted_id)})
+        return JSONResponse(status_code=201, content={"job": str(job_doc.inserted_id)})
 
 except Exception as exc:
     # Logs the error and full traceback

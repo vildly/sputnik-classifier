@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, Union
+from typing import Literal, Union
 
 from pylo import get_logger
 
@@ -67,16 +67,35 @@ def update_by_id(
         logger.info(f"MONGO: Modified: {result.modified_count}")
         return result
     except Exception as exc:
-        raise ValueError("Unable to update the document by id") from exc
+        raise ValueError(f"Unable to update document with id {str(doc_id)}") from exc
 
 
-def find_one(col: Collection, query: dict) -> Optional[Any]:
-    try:
-        res = col.find_one(query)
-        if res is None:
-            logger.info("MONGO: Document not found")
-        else:
-            logger.info(f"MONGO: Get: {res['_id']}")
-        return res
-    except Exception as exc:
-        raise ValueError("Unable to find the document") from exc
+def find_one(col: Collection, query: dict) -> dict:
+    res = col.find_one(query)
+    if res is None:
+        message = f"MONGO: Document not found with query {query}"
+        logger.warning(message)
+        raise ValueError(message)
+    if not isinstance(res, dict):
+        message = f"MONGO: Document retrieved was not a dict {res}"
+        logger.warning(message)
+        raise ValueError(message)
+
+    logger.info(f"MONGO: Found document with id {res.get('_id')}")
+    return res
+
+
+def find_by_id(col: Collection, doc_id: Union[str, ObjectId]) -> dict:
+    oid = doc_id if isinstance(doc_id, ObjectId) else ObjectId(doc_id)
+    res = col.find_one({"_id": oid})
+    if res is None:
+        message = f"MONGO: Document not found with id {oid}"
+        logger.warning(message)
+        raise ValueError(message)
+    if not isinstance(res, dict):
+        message = f"MONGO: Document retrieved was not a dict {res}"
+        logger.warning(message)
+        raise ValueError(message)
+
+    logger.info(f"MONGO: Found document with id {oid}")
+    return res
