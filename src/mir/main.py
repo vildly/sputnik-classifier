@@ -1,5 +1,5 @@
 # main.py
-from typing import List
+from typing import Union, Dict, List, Any
 
 import os
 
@@ -12,7 +12,7 @@ from pylo import get_logger
 from dotenv import load_dotenv
 
 from .db import add_one, connect_to_database, get_collection, update_by_id
-from .clean import get_dependencies
+from .clean import clean_text_to_numpy, process_json_data
 from .log_middleware import LogRequestsMiddleware
 from .openrouter import chat
 
@@ -31,7 +31,6 @@ logger = get_logger()
 
 
 try:
-    get_dependencies()
     connect_to_database(connection_string=os.getenv("MONGODB_URI"))
     app = FastAPI()
 
@@ -45,7 +44,7 @@ try:
     app.add_middleware(LogRequestsMiddleware)
 
     class JobModel(BaseModel):
-        raw: str
+        raw: Union[Dict[str, Any], List[Any]]
         prompt: str
 
     @app.post("/")
@@ -58,6 +57,21 @@ try:
 
         # TODO: Preprocess/clean "raw" data before passing it to the models and add it
         # to the db
+        pre = process_json_data(
+            json_input=body.raw, keys=["title", "description"], language="english"
+        )
+        numpy_arr = clean_text_to_numpy(pre)
+        # Convert the DataFrame 'pre' to a list of dictionaries.
+        # pre_serializable = pre.to_dict(orient="records")
+        logger.debug(pre)
+        logger.debug(numpy_arr)
+
+        # update_by_id(
+        #     col=col,
+        #     doc_id=job.inserted_id,
+        #     update_data={"pre": pre_serializable},
+        #     operator="$push",
+        # )
 
         for model in MODELS:
             # TODO: Use "pre" data here concatenated with the prompt
