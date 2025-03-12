@@ -15,6 +15,7 @@ from nltk.tokenize import RegexpTokenizer, word_tokenize
 download_dir = "./.venv/lib/nltk_data"
 download(info_or_id="stopwords", download_dir=download_dir)
 download(info_or_id="punkt", download_dir=download_dir)
+download(info_or_id="punkt_tab", download_dir=download_dir)
 
 
 # -----------------------------------------------------------------------------
