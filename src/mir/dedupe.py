@@ -1,6 +1,6 @@
 import pandas as pd
 from thefuzz import fuzz
-from typing import Dict, List
+from typing import cast, Dict, List
 
 # Read the dataset
 df = pd.read_csv("./../../data/output.csv")
@@ -15,11 +15,11 @@ df = df.drop_duplicates(subset=["feature_clean", "target"]).reset_index(drop=Tru
 
 def fuzzy_deduplicate(features: List[str], threshold: int = 90) -> Dict[str, List[str]]:
     """
-    Gruppera en lista med feature-strängar baserat på fuzzy matching.
-    Returnerar en dictionary som mappar ett "kanoniskt" värde till en lista med
-    varianter som matchar (där scorer >= threshold).
+    Group a list of feature strings based on fuzzy matching.
+    Returns a dictionary that maps a "canonical" value to a list of
+    variants that match (where scorer >= threshold).
     """
-    canonical = {}
+    canonical: Dict[str, List[str]] = {}
     for feat in features:
         match_found = False
         for key in canonical.keys():
@@ -39,7 +39,7 @@ canonical_mapping: Dict[str, str] = {}
 for target_val, grp in df.groupby("target"):
     unique_features = list(grp["feature_clean"].unique())
     # Adjust threshold depending on the leniency you want
-    dup_dict = fuzzy_deduplicate(unique_features, threshold=70)
+    dup_dict = fuzzy_deduplicate(unique_features, threshold=80)
     for canonical_value, variants in dup_dict.items():
         for variant in variants:
             canonical_mapping[variant] = canonical_value
@@ -56,8 +56,9 @@ df_unique = df.drop_duplicates(subset=["canonical_feature", "target"]).reset_ind
 # (Optionally) update the "feature" column to use the canonical version
 df_unique["feature"] = df_unique["canonical_feature"]
 
-# Create the final DataFrame with the original columns
-df_final = df_unique[["feature", "target"]]
+# Create the final DataFrame with the original columns.
+# Using .loc and .copy() ensures that Pyright treats this as a DataFrame.
+df_final: pd.DataFrame = df_unique.loc[:, ["feature", "target"]].copy()
 
 # Save the cleaned dataset
 output_file = "./../../data/cleaned_dataset.csv"
@@ -65,3 +66,27 @@ df_final.to_csv(output_file, index=False)
 
 print("Cleaning of the dataset is complete. Duplicates have been removed.")
 print(f"The cleaned dataset has been saved as '{output_file}'.")
+
+
+def print_feature_to_target_ratio(df: pd.DataFrame) -> None:
+    """
+    For each target, print:
+      - The count of unique features (after fuzzy deduplication).
+      - The ratio of that target’s feature count to the total unique feature count.
+    """
+    # Group by target and count unique features, then cast the result as a Series.
+    target_feature_counts: pd.Series = cast(
+        pd.Series, df.groupby("target")["feature"].nunique()
+    )
+    total_unique_features: int = int(df["feature"].nunique())
+
+    print("\nFeature to Target Ratio:")
+    for target, count in target_feature_counts.items():
+        ratio: float = (
+            count / total_unique_features if total_unique_features != 0 else 0
+        )
+        print(f"Target: {target:<20} Count: {count:<4}  Ratio: {ratio:.2f}")
+
+
+# Calling the function to print the counts in the console
+print_feature_to_target_ratio(df_final)
