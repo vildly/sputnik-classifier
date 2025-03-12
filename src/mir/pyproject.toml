@@ -1,0 +1,26 @@
+[project]
+name = "Mir"
+version = "0.1.0"
+description = "A little bit of everything"
+authors = [
+    {name = "Samuel Svensson", email = "ss225ze@student.lnu.se"},
+    {name = "Andreas Nilsson", email = "an224qi@student.lnu.se"},
+]
+dependencies = [
+  "pylo @ git+https://github.com/samme90s/pylo.git@v0.2.2",
+  "nltk>=3.9.1",
+  "python-dotenv>=1.0.1",
+  "dnspython>=2.7.0",
+  "pymongo>=4.11.1",
+  "requests>=2.32.3",
+  "pandas>=2.2.3",
+  "numpy>=2.2.3",
+  "httpx>=0.28.1"
+]
+requires-python = "==3.13.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
