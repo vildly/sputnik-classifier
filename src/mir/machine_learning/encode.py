@@ -31,18 +31,18 @@ def build_vocab(tokenized_texts: np.ndarray, min_freq: int = 2) -> Dict[str, int
 
 
 def encode_texts(
-    tokenized_texts: np.ndarray, vocab: Dict[str, int], max_length: int = 100
+    tokenized_texts: np.ndarray, vocab: dict[str, int], max_length: int = 100
 ) -> np.ndarray:
     """
     Converts a NumPy array of tokenized documents into sequences of word indices.
 
     Args:
         tokenized_texts (np.ndarray): Tokenized texts as a NumPy array.
-        vocab (Dict[str, int]): The vocabulary mapping words to indices.
+        vocab (dict[str, int]): The vocabulary mapping words to indices.
         max_length (int): The maximum sequence length (texts are padded/truncated to this length).
 
     Returns:
-        np.ndarray: A NumPy array of shape (num_samples, max_length) containing encoded word indices.
+        np.ndarray: Encoded text sequences as a NumPy array.
     """
     encoded_texts = np.zeros((len(tokenized_texts), max_length), dtype=np.int32)
 
@@ -50,8 +50,9 @@ def encode_texts(
         encoded = [
             vocab.get(word, 0) for word in tokens[:max_length]
         ]  # Map words to indices
-        encoded_texts[i, : len(encoded)] = (
-            encoded  # Insert sequence without looping over each padding
-        )
+        for j in range(len(encoded)):
+            if encoded[j] >= len(vocab):  # ✅ Ensure index is valid
+                encoded[j] = 0  # Convert out-of-range indices to `<PAD>`
+        encoded_texts[i, : len(encoded)] = encoded  # Insert sequence
 
     return encoded_texts
