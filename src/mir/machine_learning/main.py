@@ -9,9 +9,10 @@ from lstm_model import LSTMClassifier, train_model
 # ✅ Cleaned & tokenized the text
 # ✅ Built a vocabulary & encoded text into sequences
 # ✅ Created PyTorch Dataset & DataLoader objects
+# ✅ Defined an LSTM Model & Training Loop
 #
 # 🚀 The next step is to:
-# Define & Train an LSTM Model
+# Evaluate the model on the test set
 
 # Load train and test data with optimizations
 train_dir = "./../data/20news-bydate-train"
