@@ -1,54 +1,72 @@
+from typing import Union
 import re
 import numpy as np
-from nltk.downloader import download
-from nltk.tokenize import word_tokenize
-from typing import List
+import nltk
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
-# Download necessary NLTK package
-download("punkt")
+# Load tokenizer once (instead of per document)
+nltk.download("punkt")
+TOKENIZER = nltk.tokenize.TreebankWordTokenizer()
 
 
-def clean_text(text: str) -> str:
+def clean_text(texts: np.ndarray) -> np.ndarray:
     """
-    Removes email headers and performs basic text cleaning.
+    Cleans an array of input text by removing headers and non-alphanumeric characters.
 
     Args:
-        text (str): The input text.
+        texts (np.ndarray): A NumPy array of text strings.
 
     Returns:
-        str: Cleaned text with headers removed and non-alphanumeric characters filtered out.
+        np.ndarray: A NumPy array of cleaned text strings.
     """
-    if not isinstance(text, str):
-        return ""
+    if texts.dtype != object:
+        raise ValueError("The NumPy array must contain string objects.")
 
-    # Use NumPy array for efficient operations
-    text_array = np.array(list(text))  # Convert text to NumPy array for fast processing
-
-    # Remove email headers using regex
-    text_str = "".join(text_array)
-    text_str = re.sub(
-        r"^(From|Subject|Organization|Lines|In-Reply-To):.*$",
-        "",
-        text_str,
-        flags=re.MULTILINE,
+    # Precompile regex patterns for efficiency
+    header_pattern = re.compile(
+        r"^(From|Subject|Organization|Lines|In-Reply-To):.*$", re.MULTILINE
     )
+    non_alphanum_pattern = re.compile(r"[^a-zA-Z0-9\s]")
 
-    # Remove non-alphanumeric characters (keeping spaces)
-    text_str = re.sub(r"[^a-zA-Z0-9\s]", "", text_str)
+    # Vectorized text cleaning
+    cleaned_texts = np.empty_like(texts, dtype=object)
 
-    # Convert to lowercase
-    return text_str.lower()
+    for i in tqdm(range(len(texts)), desc="Cleaning Text", unit="doc"):
+        text = texts[i]
+        text = header_pattern.sub("", text)  # Remove headers
+        text = non_alphanum_pattern.sub("", text)  # Remove non-alphanumeric characters
+        cleaned_texts[i] = text.lower()  # Convert to lowercase
+
+    return cleaned_texts
 
 
-def tokenize_text(texts: List[str]) -> List[List[str]]:
+def tokenize_text(texts: Union[np.ndarray, list], num_workers: int = 8) -> np.ndarray:
     """
-    Tokenizes a list of text strings into word tokens using NumPy for optimization.
+    Efficiently tokenizes a NumPy array (or list) of text strings using multi-threading.
 
     Args:
-        texts (List[str]): A list of input text strings.
+        texts (np.ndarray or list): Array of input **pre-cleaned** text strings.
+        num_workers (int): Number of parallel CPU threads.
 
     Returns:
-        List[List[str]]: A list of tokenized word lists for each input string.
+        np.ndarray: A NumPy array of tokenized word lists for each input string.
     """
-    cleaned_texts = np.vectorize(clean_text)(texts)  # Vectorized text cleaning
-    return [word_tokenize(text) for text in cleaned_texts]
+    if isinstance(texts, list):
+        texts = np.array(texts, dtype=object)  # Convert list to NumPy array
+
+    if texts.dtype != object:
+        raise ValueError("The NumPy array must contain string objects.")
+
+    # Parallelize tokenization using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        tokenized_texts = list(
+            tqdm(
+                executor.map(TOKENIZER.tokenize, texts),
+                total=len(texts),
+                desc="Tokenizing Texts",
+                unit="doc",
+            )
+        )
+
+    return np.array(tokenized_texts, dtype=object)
