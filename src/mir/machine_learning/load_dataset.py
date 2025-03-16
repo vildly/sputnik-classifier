@@ -57,7 +57,7 @@ def load_20news_data(
         ])
 
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
-            results = np.array(list(executor.map(read_file, file_paths)), dtype=object)
+            results = np.fromiter(executor.map(read_file, file_paths), dtype=object)
 
         # Remove None values before concatenation
         valid_mask = np.array([
