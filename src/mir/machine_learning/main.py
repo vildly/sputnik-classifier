@@ -1,4 +1,4 @@
-from load_dataset import load_20news_data
+from load_dataset import load_20news_data, save_news_data_to_json
 from preprocess import clean_text, tokenize_text
 from encode import build_vocab, encode_texts
 from news_dataset import NewsDataset
@@ -14,12 +14,19 @@ from lstm_model import LSTMClassifier, train_model
 # 🚀 The next step is to:
 # Evaluate the model on the test set
 
-# Load train and test data with optimizations
-train_dir = "./../data/20news-bydate-train"
-test_dir = "./../data/20news-bydate-test"
+train_dir = "./../data/20news-bydate-train/"
+test_dir = "./../data/20news-bydate-test/"
 
-train_texts, train_labels, categories = load_20news_data(train_dir, num_workers=8)
-test_texts, test_labels, _ = load_20news_data(test_dir, num_workers=8)
+# Save a 100 random test documents to JSON file (pi based selection)
+# save_news_data_to_json(
+#     directory=test_dir, output_file="./../data/datav3_100.json", num_workers=8
+# )
+
+# Load training dataset
+train_texts, train_labels, categories, _ = load_20news_data(train_dir, num_workers=8)
+
+# Load test dataset independently
+test_texts, test_labels, _, _ = load_20news_data(test_dir, num_workers=8)
 
 print(f"[INFO] Category Mapping: {categories}")
 
