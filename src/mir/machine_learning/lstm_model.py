@@ -14,6 +14,7 @@ class LSTMClassifier(nn.Module):
         output_dim: int = 20,
     ):
         super(LSTMClassifier, self).__init__()
+        self.vocab_size = vocab_size  # Store vocab size as an attribute
         self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
         self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True, bidirectional=True)
         self.fc = nn.Linear(hidden_dim * 2, output_dim)
@@ -65,17 +66,32 @@ class LSTMClassifier(nn.Module):
 
         print("[INFO] Model Training Complete!")
 
+    def save(self, path: str) -> None:
+        """Saves the model's state dictionary along with vocab size."""
+        torch.save(
+            {"model_state_dict": self.state_dict(), "vocab_size": self.vocab_size}, path
+        )
+        print(f"[INFO] Model and vocab size saved to {path}")
 
-def save_model(model: nn.Module, path: str) -> None:
-    """Saves the model's state dictionary to the specified path."""
-    torch.save(model.state_dict(), path)
-    print(f"[INFO] Model saved to {path}")
+    @classmethod
+    def from_pretrained(
+        cls, path: str, device: torch.device = torch.device("cpu")
+    ) -> "LSTMClassifier":
+        # Load model data including state_dict and vocab_size
+        checkpoint = torch.load(path, map_location=device)
 
+        # Retrieve vocab_size from the checkpoint
+        vocab_size = checkpoint["vocab_size"]
 
-def load_model(
-    model: nn.Module, path: str, device: torch.device = torch.device("cpu")
-) -> nn.Module:
-    """Loads model parameters from the specified file into the provided model instance."""
-    model.load_state_dict(torch.load(path, map_location=device))
-    print(f"[INFO] Model loaded from {path}")
-    return model
+        # Instantiate the model with the retrieved vocab_size
+        model = cls(vocab_size=vocab_size)
+
+        # Load the state dictionary into the model
+        model.load_state_dict(checkpoint["model_state_dict"])
+
+        # Move model to appropriate device
+        model.to(device)
+
+        print(f"[INFO] Model loaded from {path} with vocab size: {vocab_size}")
+
+        return model

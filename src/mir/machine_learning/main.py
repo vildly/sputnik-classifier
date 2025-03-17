@@ -3,7 +3,7 @@ from preprocess import clean_text, tokenize_text
 from encode import build_vocab, encode_texts
 from news_dataset import NewsDataset
 from torch.utils.data import DataLoader
-from lstm_model import LSTMClassifier, save_model
+from lstm_model import LSTMClassifier
 
 # ✅ Loaded the dataset
 # ✅ Cleaned & tokenized the text
@@ -22,38 +22,51 @@ test_dir = "./../data/20news-bydate-test/"
 #     directory=test_dir, output_file="./../data/datav3_100.json", num_workers=8
 # )
 
-# Load training dataset
-train_texts, train_labels, categories, _ = load_20news_data(train_dir, num_workers=8)
 
-# Load test dataset independently
-test_texts, test_labels, _, _ = load_20news_data(test_dir, num_workers=8)
+def train():
+    # Load training dataset
+    train_texts, train_labels, categories, _ = load_20news_data(
+        train_dir, num_workers=8
+    )
 
-print(f"[INFO] Category Mapping: {categories}")
+    # Load test dataset independently
+    # test_texts, test_labels, _, _ = load_20news_data(test_dir, num_workers=8)
 
-# Clean and tokenize the training data
-train_tokens = tokenize_text(clean_text(train_texts))
-test_tokens = tokenize_text(clean_text(test_texts))
+    print(f"[INFO] Category Mapping: {categories}")
 
-print("[INFO] Sample cleaned and tokenized document:", train_tokens[0][:10], "...")
+    # Clean and tokenize the training data
+    train_tokens = tokenize_text(clean_text(train_texts))
+    # test_tokens = tokenize_text(clean_text(test_texts))
 
-# Apply Vocabulary + Encoding
-vocab = build_vocab(train_tokens)
-train_sequences = encode_texts(train_tokens, vocab)
-test_sequences = encode_texts(test_tokens, vocab)
+    print("[INFO] Sample cleaned and tokenized document:", train_tokens[0][:10], "...")
 
-print("[INFO] Sample Encoded Text:", train_sequences[0][:10], "...")
+    # Apply Vocabulary + Encoding
+    vocab = build_vocab(train_tokens)
+    train_sequences = encode_texts(train_tokens, vocab)
+    # test_sequences = encode_texts(test_tokens, vocab)
 
-# Create Dataset Objects
-train_dataset = NewsDataset(train_sequences, train_labels)
-test_dataset = NewsDataset(test_sequences, test_labels)
+    print("[INFO] Sample Encoded Text:", train_sequences[0][:10], "...")
 
-# Create DataLoaders for batch processing
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    # Create Dataset Objects
+    train_dataset = NewsDataset(train_sequences, train_labels)
+    # test_dataset = NewsDataset(test_sequences, test_labels)
 
-print("[INFO] DataLoader Created! Ready for Model Training")
+    # Create DataLoaders for batch processing
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    # test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-model = LSTMClassifier(vocab_size=len(vocab))
-model.train_model(train_loader=train_loader)
+    print("[INFO] DataLoader Created! Ready for Model Training")
 
-save_model(model=model, path="./model.pth")
+    model = LSTMClassifier(vocab_size=len(vocab))
+    model.train_model(train_loader=train_loader)
+
+    model.save(path="./model.pth")
+
+
+def load():
+    model = LSTMClassifier.from_pretrained(path="./model.pth")
+    print(f"Model trained: {model}")
+
+
+if __name__ == "__main__":
+    load()
