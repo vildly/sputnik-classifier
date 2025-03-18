@@ -1,11 +1,13 @@
 # main.py
 from typing import List
-
+import re
 import os
 import asyncio
 
 from pylo import get_logger
 from dotenv import load_dotenv
+from ragas_test import evaluate_data
+import json
 
 from clean import process_json_data
 from db import (
@@ -31,70 +33,157 @@ class Body:
 
 
 body = Body(
-    data_id="67cad4bf1aa383247994482c",
+    # data_id="67cad4bf1aa383247994482c",
+    # data_id="67d1b80b2d50436191e7ee35",
+    data_id = "67d6c7a60d7931f6342971f0",
     prompt="categorize the data into the categories provided",
-    models=["deepseek/deepseek-r1:free", "google/gemini-2.0-pro-exp-02-05:free"],
+    models=["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-pro-exp-02-05:free" ],
 )
 
 
-async def main():
-    try:
-        connect_to_database(connection_string=os.getenv("MONGODB_URI"))
+async def do_task(model, jobs_col, query, job_doc):
+    tasks = []
+    for model in body.models:
+        task = asyncio.create_task(chat(model, query))
+        tasks.append(task)
 
-        # Prepare a job document to store the results
-        jobs_col = get_collection(db="jobs", collection="v1")
-        job_doc = add_one(
+    # As each task completes, update the job document.
+    for completed in asyncio.as_completed(tasks):
+        model, res = await completed
+        print(f"Got answer: {res}; ")
+        logger.info(f"Completed: {model}; adding to the job document")
+        result = update_by_id(
             col=jobs_col,
-            data={"data_id": body.data_id, "prompt": body.prompt},
+            doc_id=job_doc.inserted_id,
+            update_data={"model": {"$each": [{model: res}]}},
+            operator="$push",
         )
+        # Optionally log the result to debug
+        logger.info(f"Update result: {result.modified_count if result else 'No result logged'}")
 
-        # Prepare the data for the models:
-        data_col = get_collection(db="data", collection="v1")
-        data_doc = find_by_id(col=data_col, doc_id=body.data_id)
+def strip_markdown_fences(text):
 
-        # --- Integrate the data cleaning functions ---
-        # Our document's "data" field is a list of records (each with a "description")
-        # We pass that list to process_json_data along with the key to process.
-        keys_to_clean = ["description"]
+    text = text.strip()
+    text = re.sub(r'^```json\s*', '', text)
+    text = re.sub(r'\s*```$', '', text)
+    return text
 
-        # Process the list of descriptions.
-        # If you want to use Swedish stop words, you might pass language="swedish"
-        cleaned_df = process_json_data(
-            json_input=data_doc.get("data", []), keys=keys_to_clean, language="swedish"
-        )
+def load_json_data(job_id: str) -> str:
+ 
 
-        # Option 1: If you want to join all individual clean texts into one string:
-        joined_clean_text = " ".join(cleaned_df["clean_text"].tolist())
-        data_doc["clean_text"] = joined_clean_text
+    string = ""
+    col = get_collection(db="jobs", collection="v1")
+    data_doc = find_by_id(col=col, doc_id=job_id)   
 
-        # Option 2: Alternatively, you could keep the cleaned DataFrame records
-        # and, for example, send the list instead of a joined string:
-        # data_doc["clean_text"] = cleaned_df["clean_text"].tolist()
+    for i in range(len(data_doc["model"])):
+        for model in body.models: 
+            try:
+                if(data_doc["model"][i][model]):
+                    
+                    string += strip_markdown_fences(
+                            data_doc["model"][i][model]["choices"][0]["message"]["content"] 
+                    ) + ",\n"
+            
+            except KeyError:
+                pass # Just catch key error
 
-        # Concatenate the prompt to the document (if desired).
-        data_doc["prompt"] = body.prompt
+    print(string)
 
-        # --- Create asynchronous tasks to call your model endpoints ---
-        # Create tasks that return a tuple (model, result)
-        tasks = []
-        for model in body.models:
-            task = asyncio.create_task(chat(model, str(data_doc)))
-            tasks.append(task)
 
-        # As each task completes, update the job document.
-        for completed in asyncio.as_completed(tasks):
-            model, res = await completed
-            logger.info(f"Completed: {model}; adding to the job document")
-            update_by_id(
-                col=jobs_col,
-                doc_id=job_doc.inserted_id,
-                update_data={"model": {"$each": [{model: res}]}},
-                operator="$push",
-            )
-    except Exception as exc:
-        # Logs the error and full traceback
-        logger.exception(exc)
+    return ""
 
+async def main():
+    MAX_DATA_LENGTH = 100000
+    cnt_len = 0
+    data_length = 0
+
+    connect_to_database(connection_string=os.getenv("MONGODB_URI"))
+
+    # load_json_data(job_id="67d9a532eb06d49efba0558f")
+    # exit()
+ 
+    data_col = get_collection(db="data", collection="v1")
+    data_doc = find_by_id(col=data_col, doc_id=body.data_id)   
+    articles_length = len(data_doc["articles"])
+
+    categories = ", ".join(data_doc["categories"])
+
+    # Static base query with a placeholder for input_data
+    base_query = """
+    You are an expert in text categorization. Please follow the instructions carefully.
+
+    I will provide you with a string that represents data in a JSON-like format. This string may resemble a Python dictionary, but your task is to parse it and produce valid JSON. Each input text (string value) must be categorized according to the categories I provide. You must choose only one category from the list for each text, and you must not invent new categories.
+
+    Your tasks are:
+    1. Parse the string to identify the keys and values.
+    2. Convert any single quotes (') used for keys or string values into double quotes (") to comply with strict JSON rules.
+    3. Validate that the structure is a valid JSON object (no trailing commas, all keys and values properly quoted, etc.).
+    4. For each key in the JSON, assign exactly one of the categories provided. Do not use any category that is not in the list.
+    5. It is crucial that your response is only JSON and nothing else. No commentary is needed.
+
+    The expected JSON format is as follows:
+    {{
+      "key1": "categoryChosenFromList",
+      "key2": "categoryChosenFromList",
+      ...
+    }}
+
+    For example, if given the string:
+    {{
+      "0": "Some short text to categorize",
+      "1": "Another text to categorize"
+    }}
+
+    You should output valid JSON with the same keys but where each value is ONE category from the list.
+
+    IMPORTANT: Only use ONE OF the categories provided, and do not add or modify categories beyond those listed. Choose the most appropriate category for each text.
+
+    Categories you must choose from: {categories}
+
+    Here is the JSON string to be processed:
+    {input_data}  # This is the placeholder
+    """
+
+    # Dictionary to accumulate input data
+    input_dict = {}
+
+    jobs_col = get_collection(db="jobs", collection="v1")
+    job_doc = add_one(
+        col=jobs_col,
+        data={"data_id": body.data_id, "prompt": body.prompt, "model": []},
+    )
+
+    while cnt_len < articles_length:
+        for i in range(articles_length):
+            
+            current_article_text = data_doc["articles"][i]['user_input']
+            data_length += len(current_article_text)
+            cnt_len += 1
+
+            if data_length > MAX_DATA_LENGTH:
+                print(f"Max length reached on index {i}")
+                data_length = 0
+
+                # Convert the dictionary to a JSON string
+                input_data = json.dumps(input_dict, ensure_ascii=False)
+
+                # Create the full query by inserting the current JSON data
+                full_query = base_query.format(input_data=input_data, categories=categories)  
+                await do_task(body.models, jobs_col, full_query, job_doc)
+                print(full_query)
+                print("HERE>>>>>>>>>>>>>>> " + str (i))
+                # Reset input_dict for the next batch
+                input_dict = {}
+
+            else:
+                # Populate the dictionary
+                input_dict[str(i)] = current_article_text
+
+    # Process any remaining data at the end
+    if input_dict:
+        input_data = json.dumps(input_dict, ensure_ascii=False)
+        full_query = base_query.format(input_data=input_data, categories=categories)
+        #print(full_query)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -15,7 +15,14 @@ dependencies = [
   "requests>=2.32.3",
   "pandas>=2.2.3",
   "numpy>=2.2.3",
-  "httpx>=0.28.1"
+  "httpx>=0.28.1",
+  "ragas>=0.2.14",
+  "langchain-openai>=0.3.8",
+  "dotenv>=0.9.9",
+  "rouge-score>=0.1.2",
+  "sacrebleu>=2.5.1",
+  "rapidfuzz>=3.12.2",
+  "seaborn>=0.13.2"
 ]
 requires-python = "==3.13.*"
 readme = "README.md"
