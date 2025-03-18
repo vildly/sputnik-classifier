@@ -42,3 +42,8 @@ go.work.sum
 
 # Ignore generated kubeconfig from google-github-actions/get-gke-credentials
 gha-kubeconfig-*
+
+# Machine Learning
+**/*.pth
+test_set.json
+vocab.json
