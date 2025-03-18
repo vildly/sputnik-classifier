@@ -1,9 +1,9 @@
-from load_dataset import load_20news_data, save_news_data_to_json
+from load_dataset import load_20news_data
 from preprocess import clean_text, tokenize_text
 from encode import build_vocab, encode_texts
 from news_dataset import NewsDataset
 from torch.utils.data import DataLoader
-from lstm_model import LSTMClassifier, train_model
+from lstm_model import LSTMClassifier, save_model
 
 # ✅ Loaded the dataset
 # ✅ Cleaned & tokenized the text
@@ -54,4 +54,6 @@ test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 print("[INFO] DataLoader Created! Ready for Model Training")
 
 model = LSTMClassifier(vocab_size=len(vocab))
-trained_model = train_model(model, vocab, train_loader)
+model.train_model(train_loader=train_loader)
+
+save_model(model=model, path="./model.pth")
