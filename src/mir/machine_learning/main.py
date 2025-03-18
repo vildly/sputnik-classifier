@@ -1,31 +1,24 @@
-import json
-from sklearn.metrics import accuracy_score
+import math
 import torch
 from torch.utils.data import DataLoader
-from lstm_model import LSTMClassifier
-from load_dataset import load_20news_data
-from preprocess import clean_text, tokenize_text
-from encode import build_vocab, encode_texts
-from news_dataset import NewsDataset
+from sklearn.metrics import accuracy_score
+from lstm import (
+    create_test_set,
+    load_vocab,
+    load_20news_data,
+    clean_text,
+    tokenize_text,
+    build_vocab,
+    encode_texts,
+    NewsDataset,
+    LSTMClassifier,
+)
 
 train_dir = "./../data/20news-bydate-train/"
 test_dir = "./../data/20news-bydate-test/"
 
 
-def save_vocab(vocab, path):
-    with open(path, "w") as f:
-        json.dump(vocab, f)
-    print(f"[INFO] Vocabulary saved to {path}")
-
-
-def load_vocab(path):
-    with open(path, "r") as f:
-        vocab = json.load(f)
-    print(f"[INFO] Vocabulary loaded from {path}")
-    return vocab
-
-
-def train_and_save_model():
+def train_model():
     # Load and preprocess training data
     train_texts, train_labels, _, _ = load_20news_data(
         directory=train_dir, num_workers=8
@@ -35,8 +28,6 @@ def train_and_save_model():
     train_tokens = tokenize_text(texts=clean_text(train_texts), num_workers=8)
     # min_freq=1 to include all words
     vocab = build_vocab(tokenized_texts=train_tokens, min_freq=1)
-    # Save the vocabulary
-    save_vocab(vocab=vocab, path="./vocab.json")
 
     # Create Dataset and DataLoader
     train_sequences = encode_texts(
@@ -48,9 +39,6 @@ def train_and_save_model():
     # Instantiate and train the model
     model = LSTMClassifier(vocab_size=len(vocab))
     model.train_model(train_loader=train_loader)
-
-    # Save model
-    model.save(path="./model.pth")
 
 
 def evaluate_model():
@@ -99,5 +87,13 @@ def evaluate_model():
 
 
 if __name__ == "__main__":
-    train_and_save_model()  # First, we train and save the model
-    evaluate_model()  # Then, we evaluate it using the test set
+    # For the LLMs and then later the LSTM
+    # create_test_set(
+    #     directory=test_dir,
+    #     num_workers=8,
+    #     seed=int(str(math.pi)[2:9]),
+    #     sample_size=100,
+    # )
+
+    train_model()
+    evaluate_model()
