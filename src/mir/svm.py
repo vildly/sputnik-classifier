@@ -67,9 +67,11 @@ def load_dir(path: str) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def clean_texts(texts: np.ndarray, lang: str = "english") -> np.ndarray:
+    print("Cleaning texts")
+    print("This may take a while...")
     cleaned_texts: np.ndarray = np.empty_like(texts, dtype=object)
 
-    for ix, text in texts:
+    for ix, text in enumerate(texts):
         text = text.lower()
         # Remove punctuation
         translator: Dict[int, int | None] = str.maketrans("", "", punctuation)
@@ -82,6 +84,7 @@ def clean_texts(texts: np.ndarray, lang: str = "english") -> np.ndarray:
 
         cleaned_texts[ix] = " ".join(filtered_words)
 
+    print("Texts cleaned")
     return cleaned_texts
 
 
