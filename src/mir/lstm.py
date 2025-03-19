@@ -22,7 +22,7 @@ TOKENIZER = nltk.tokenize.TreebankWordTokenizer()
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, vocab_size: int, embed_dim: int = 128, hidden_dim: int = 256, output_dim: int = 20) -> None:
+    def __init__(self, vocab_size: int, embed_dim: int = 32, hidden_dim: int = 64, output_dim: int = 20) -> None:
         super(LSTMClassifier, self).__init__()
         self.vocab_size = vocab_size
         self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
@@ -35,8 +35,9 @@ class LSTMClassifier(nn.Module):
         hidden = torch.cat((hidden[-2], hidden[-1]), dim=1)
         return self.fc(hidden)
 
-    def train_model(self, train_loader: DataLoader, num_epochs: int = 5, lr: float = 0.003) -> None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def train_model(self, train_loader: DataLoader, num_epochs: int, lr: float, device: Optional[torch.device] = None) -> None:
+        if device is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.parameters(), lr=lr)
@@ -100,7 +101,9 @@ def derive_pi_seed(num_subsets: int, offset: int = 0) -> List[int]:
     return seeds
 
 
-def load_20news_data(directory: str, num_workers: int = 4) -> Tuple[np.ndarray, np.ndarray, Dict[str, int], np.ndarray]:
+def load_20news_data(
+    directory: str, num_workers: int = 2, max_workers: Optional[int] = None
+) -> Tuple[np.ndarray, np.ndarray, Dict[str, int], np.ndarray]:
     category_folders = np.array(sorted(os.listdir(directory)))
     category_mapping: Dict[str, int] = {category: i for i, category in enumerate(category_folders)}
 
@@ -114,7 +117,7 @@ def load_20news_data(directory: str, num_workers: int = 4) -> Tuple[np.ndarray, 
             continue
 
         file_paths = np.array([os.path.join(category_path, f) for f in os.listdir(category_path)])
-        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        with ThreadPoolExecutor(max_workers=(max_workers or num_workers)) as executor:
             results = np.fromiter(executor.map(read_file, file_paths), dtype=object)
 
         valid_mask = np.array([x is not None for x in results])
@@ -138,7 +141,7 @@ def read_file(file_path: str) -> Optional[str]:
         return None
 
 
-def clean_text(texts: np.ndarray) -> np.ndarray:
+def clean_text(texts: np.ndarray, stop_words: Optional[set] = None) -> np.ndarray:
     if texts.dtype != object:
         raise ValueError("The NumPy array must contain string objects.")
 
@@ -149,7 +152,9 @@ def clean_text(texts: np.ndarray) -> np.ndarray:
     non_ascii_pattern = re.compile(r"[^\x00-\x7F]+")
     multiple_spaces_pattern = re.compile(r"\s+")
 
-    stop_words = set(stopwords.words("english"))
+    if stop_words is None:
+        stop_words = set(stopwords.words("english"))
+
     cleaned_texts = np.empty_like(texts, dtype=object)
 
     for i in tqdm(range(len(texts)), desc="Cleaning Text", unit="doc"):
@@ -169,17 +174,20 @@ def clean_text(texts: np.ndarray) -> np.ndarray:
     return cleaned_texts
 
 
-def tokenize_text(texts: Union[np.ndarray, list], num_workers: int = 8) -> np.ndarray:
+def tokenize_text(texts: Union[np.ndarray, list], tokenizer=None, num_workers: int = 2, max_workers: Optional[int] = None) -> np.ndarray:
     if isinstance(texts, list):
         texts = np.array(texts, dtype=object)
 
     if texts.dtype != object:
         raise ValueError("The NumPy array must contain string objects.")
 
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+    if tokenizer is None:
+        tokenizer = TOKENIZER
+
+    with ThreadPoolExecutor(max_workers=(max_workers or num_workers)) as executor:
         tokenized_texts = list(
             tqdm(
-                executor.map(TOKENIZER.tokenize, texts),
+                executor.map(tokenizer.tokenize, texts),
                 total=len(texts),
                 desc="Tokenizing Texts",
                 unit="doc",
@@ -189,7 +197,7 @@ def tokenize_text(texts: Union[np.ndarray, list], num_workers: int = 8) -> np.nd
     return np.array(tokenized_texts, dtype=object)
 
 
-def build_vocab(tokenized_texts: np.ndarray, min_freq: int = 2) -> Dict[str, int]:
+def build_vocab(tokenized_texts: np.ndarray, min_freq: int = 2, save_path: Optional[str] = "./vocab.json") -> Dict[str, int]:
     word_counter: Counter = Counter()
     for tokens in tokenized_texts:
         word_counter.update(tokens)
@@ -197,15 +205,16 @@ def build_vocab(tokenized_texts: np.ndarray, min_freq: int = 2) -> Dict[str, int
     vocab: Dict[str, int] = {word: idx + 1 for idx, (word, freq) in enumerate(word_counter.items()) if freq >= min_freq}
     vocab["<PAD>"] = 0
 
-    path = "./vocab.json"
-    with open(path, "w") as f:
-        json.dump(vocab, f)
-    print(f"[INFO] Vocabulary saved to {path}")
+    if save_path:
+        with open(save_path, "w") as f:
+            json.dump(vocab, f)
+        print(f"[INFO] Vocabulary saved to {save_path}")
+
     print(f"[INFO] Vocabulary Size: {len(vocab)} words")
     return vocab
 
 
-def encode_texts(tokenized_texts: np.ndarray, vocab: Dict[str, int], max_length: int = 100) -> np.ndarray:
+def encode_texts(tokenized_texts: np.ndarray, vocab: Dict[str, int], max_length: int = 50) -> np.ndarray:
     encoded_texts = np.zeros((len(tokenized_texts), max_length), dtype=np.int32)
 
     for i, tokens in enumerate(tokenized_texts):
@@ -217,18 +226,22 @@ def encode_texts(tokenized_texts: np.ndarray, vocab: Dict[str, int], max_length:
 
 def train_pipeline(
     train_dir: str,
-    num_epochs: int = 5,
-    lr: float = 0.003,
-    batch_size: int = 32,
-    subset_size: int = 1000,
-    num_subsets: int = 10,
-    embed_dim: int = 128,
-    hidden_dim: int = 256,
-    max_length: int = 200,
+    num_epochs: int = 1,
+    lr: float = 0.001,
+    batch_size: int = 16,
+    subset_size: int = 50,
+    num_subsets: int = 1,
+    embed_dim: int = 32,
+    hidden_dim: int = 64,
+    max_length: int = 50,
+    num_workers: int = 2,
+    vocab_save_path: str = "./vocab.json",
+    stop_words: Optional[set] = None,
+    device: Optional[torch.device] = None,
 ) -> None:
-    train_texts, train_labels, _, _ = load_20news_data(directory=train_dir, num_workers=8)
-    train_tokens = tokenize_text(texts=clean_text(train_texts), num_workers=8)
-    vocab = build_vocab(tokenized_texts=train_tokens, min_freq=1)
+    train_texts, train_labels, _, _ = load_20news_data(directory=train_dir, num_workers=num_workers)
+    train_tokens = tokenize_text(texts=clean_text(train_texts, stop_words=stop_words), num_workers=num_workers)
+    vocab = build_vocab(tokenized_texts=train_tokens, min_freq=1, save_path=vocab_save_path)
     train_sequences = encode_texts(tokenized_texts=train_tokens, vocab=vocab, max_length=max_length)
 
     model = LSTMClassifier(vocab_size=len(vocab), embed_dim=embed_dim, hidden_dim=hidden_dim)
@@ -244,16 +257,27 @@ def train_pipeline(
     subset_data = train_sequences[all_indices]
     subset_labels = train_labels[all_indices]
 
-    train_dataset = SubsetDataset(full_data=subset_data, full_labels=subset_labels, sample_size=subset_size, seed=np.random.randint(1000))
+    train_dataset = SubsetDataset(
+        full_data=subset_data,
+        full_labels=subset_labels,
+        sample_size=subset_size,
+        seed=np.random.randint(1000),
+    )
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
 
-    model.train_model(train_loader=train_loader, num_epochs=num_epochs, lr=lr)
+    model.train_model(train_loader=train_loader, num_epochs=num_epochs, lr=lr, device=device)
 
 
 def evaluate_pipeline(
-    test_dir: str, vocab_path: str = "./vocab.json", model_path: str = "./model.pth", max_length: int = 100, batch_size: int = 32
+    test_dir: str,
+    vocab_path: str,
+    model_path: str,
+    max_length: int = 50,
+    batch_size: int = 16,
+    num_workers: int = 2,
+    device: Optional[torch.device] = None,
 ) -> None:
-    test_texts, test_labels, _, _ = load_20news_data(directory=test_dir, num_workers=8)
+    test_texts, test_labels, _, _ = load_20news_data(directory=test_dir, num_workers=num_workers)
 
     vocab = load_vocab(vocab_path)
     test_tokens = tokenize_text(texts=clean_text(test_texts))
@@ -262,10 +286,10 @@ def evaluate_pipeline(
     test_dataset = NewsDataset(encoded_texts=test_sequences, labels=test_labels)
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LSTMClassifier.from_pretrained(path=model_path)
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = LSTMClassifier.from_pretrained(path=model_path, device=device)
     model.eval()
-    model.to(device)
 
     all_preds = []
     all_labels = []
@@ -313,11 +337,11 @@ if __name__ == "__main__":
         train_dir=train_dir,
         num_epochs=1,
         lr=0.001,
-        batch_size=64,
-        subset_size=100,
+        batch_size=16,
+        subset_size=50,
         num_subsets=1,
-        embed_dim=256,
-        hidden_dim=512,
-        max_length=150,
+        embed_dim=32,
+        hidden_dim=64,
+        max_length=50,
     )
-    evaluate_pipeline(test_dir=test_dir, vocab_path="./vocab.json", model_path="./model.pth", max_length=150, batch_size=32)
+    evaluate_pipeline(test_dir=test_dir, vocab_path="./vocab.json", model_path="./model.pth", max_length=50, batch_size=16)
