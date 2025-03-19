@@ -13,9 +13,9 @@ from nltk.corpus import stopwords
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from sklearn.metrics import accuracy_score
-from typing import Dict, Optional, Tuple, Union, List
+from typing import Dict, Optional, Tuple, List
 
-# Downloading NLTK datasets for tokenization and stopword filtering.
+# Setup NLTK for tokenization and stopword filtering
 nltk.download("stopwords", quiet=True)
 nltk.download("punkt", quiet=True)
 TOKENIZER = nltk.tokenize.TreebankWordTokenizer()
@@ -23,8 +23,7 @@ TOKENIZER = nltk.tokenize.TreebankWordTokenizer()
 
 class LSTMClassifier(nn.Module):
     def __init__(self, vocab_size: int, embed_dim: int = 32, hidden_dim: int = 64, output_dim: int = 20) -> None:
-        super(LSTMClassifier, self).__init__()
-        self.vocab_size = vocab_size
+        super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
         self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True, bidirectional=True)
         self.fc = nn.Linear(hidden_dim * 2, output_dim)
@@ -35,9 +34,7 @@ class LSTMClassifier(nn.Module):
         hidden = torch.cat((hidden[-2], hidden[-1]), dim=1)
         return self.fc(hidden)
 
-    def train_model(self, train_loader: DataLoader, num_epochs: int, lr: float, device: Optional[torch.device] = None) -> None:
-        if device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def train_model(self, train_loader: DataLoader, num_epochs: int, lr: float, device: torch.device) -> None:
         self.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.parameters(), lr=lr)
@@ -54,34 +51,25 @@ class LSTMClassifier(nn.Module):
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
-                progress_bar.set_postfix(loss=f"{total_loss / len(train_loader):.4f}")
+                progress_bar.set_postfix(loss=total_loss / len(train_loader))
             print(f"[INFO] Epoch {epoch + 1} Completed: Avg Loss = {total_loss / len(train_loader):.4f}")
 
-    def _save(self, path: str, embed_dim: int, hidden_dim: int) -> None:
-        save_dict = {
-            "model_state_dict": self.state_dict(),
-            "vocab_size": self.vocab_size,
-            "embed_dim": embed_dim,
-            "hidden_dim": hidden_dim,
-        }
-        torch.save(save_dict, path)
-        print(f"[INFO] Model and vocab size saved to {path}")
+    def save(self, model_path: str) -> None:
+        torch.save(self.state_dict(), model_path)
+        print(f"[INFO] Model saved to {model_path}")
 
     @classmethod
-    def from_pretrained(cls, path: str, device: torch.device = torch.device("cpu")) -> "LSTMClassifier":
-        checkpoint = torch.load(path, map_location=device)
-        model = cls(vocab_size=checkpoint["vocab_size"], embed_dim=checkpoint["embed_dim"], hidden_dim=checkpoint["hidden_dim"])
-        model.load_state_dict(checkpoint["model_state_dict"])
+    def from_pretrained(cls, vocab_size: int, embed_dim: int, hidden_dim: int, model_path: str, device: torch.device):
+        model = cls(vocab_size, embed_dim, hidden_dim)
+        model.load_state_dict(torch.load(model_path, map_location=device))
         model.to(device)
         return model
 
 
-class SubsetDataset(Dataset):
-    def __init__(self, full_data: np.ndarray, full_labels: np.ndarray, sample_size: int, seed: int) -> None:
-        np.random.seed(seed)
-        self.indices = np.random.choice(len(full_labels), sample_size, replace=False)
-        self.data = torch.tensor(full_data[self.indices], dtype=torch.long)
-        self.labels = torch.tensor(full_labels[self.indices], dtype=torch.long)
+class TextDataset(Dataset):
+    def __init__(self, data: np.ndarray, labels: np.ndarray) -> None:
+        self.data = torch.tensor(data, dtype=torch.long)
+        self.labels = torch.tensor(labels, dtype=torch.long)
 
     def __len__(self) -> int:
         return len(self.labels)
@@ -90,46 +78,28 @@ class SubsetDataset(Dataset):
         return self.data[idx], self.labels[idx]
 
 
-def derive_pi_seed(num_subsets: int, offset: int = 0) -> List[int]:
+def derive_pi_seeds(num_subsets: int, offset: int = 0) -> List[int]:
     pi_str = str(math.pi).replace(".", "")
-    seeds = []
-    for i in range(num_subsets):
-        seed_str = pi_str[offset + i : offset + i + 2]
-        if len(seed_str) < 2:
-            break
-        seeds.append(int(seed_str))
+    seeds = [int(pi_str[i : i + 2]) for i in range(offset, offset + 2 * num_subsets, 2) if len(pi_str[i : i + 2]) == 2]
     return seeds
 
 
-def load_20news_data(
-    directory: str, num_workers: int = 2, max_workers: Optional[int] = None
-) -> Tuple[np.ndarray, np.ndarray, Dict[str, int], np.ndarray]:
-    category_folders = np.array(sorted(os.listdir(directory)))
-    category_mapping: Dict[str, int] = {category: i for i, category in enumerate(category_folders)}
+def load_data(directory: str, num_workers: int = 2) -> Tuple[np.ndarray, np.ndarray, Dict[str, int]]:
+    category_map = {cat: idx for idx, cat in enumerate(sorted(os.listdir(directory)))}
+    texts, labels = [], []
 
-    texts = np.array([], dtype=object)
-    labels = np.array([], dtype=np.int32)
-    categories = np.array([], dtype=object)
-
-    for category, category_id in tqdm(category_mapping.items(), desc="Processing categories", unit="category"):
+    for category, cat_id in tqdm(category_map.items(), desc="Loading data", unit="category"):
         category_path = os.path.join(directory, category)
-        if not os.path.isdir(category_path):
-            continue
+        if os.path.isdir(category_path):
+            file_paths = [os.path.join(category_path, f) for f in os.listdir(category_path)]
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                results = list(executor.map(read_file, file_paths))
+            valid_texts = [r for r in results if r is not None]
+            texts.extend(valid_texts)
+            labels.extend([cat_id] * len(valid_texts))
 
-        file_paths = np.array([os.path.join(category_path, f) for f in os.listdir(category_path)])
-        with ThreadPoolExecutor(max_workers=(max_workers or num_workers)) as executor:
-            results = np.fromiter(executor.map(read_file, file_paths), dtype=object)
-
-        valid_mask = np.array([x is not None for x in results])
-        valid_texts = results[valid_mask]
-
-        if len(valid_texts) > 0:
-            texts = np.concatenate((texts, valid_texts)) if texts.size > 0 else valid_texts
-            labels = np.concatenate((labels, np.full(len(valid_texts), category_id, dtype=np.int32)))
-            categories = np.concatenate((categories, np.full(len(valid_texts), category, dtype=object)))
-
-    print(f"[INFO] Loaded {len(texts)} documents from '{directory}' across {len(category_mapping)} categories.")
-    return texts, labels, category_mapping, categories
+    print(f"[INFO] Loaded {len(texts)} documents from {len(category_map)} categories.")
+    return np.array(texts, dtype=object), np.array(labels, dtype=np.int32), category_map
 
 
 def read_file(file_path: str) -> Optional[str]:
@@ -141,219 +111,139 @@ def read_file(file_path: str) -> Optional[str]:
         return None
 
 
-def clean_text(texts: np.ndarray, stop_words: Optional[set] = None) -> np.ndarray:
-    if texts.dtype != object:
-        raise ValueError("The NumPy array must contain string objects.")
+def clean_texts(texts: np.ndarray) -> np.ndarray:
+    stop_words = set(stopwords.words("english"))
 
-    header_pattern = re.compile(r"^(Subject|From|Distribution|Organization|NNTP-Posting-Host|Lines):.*$", re.MULTILINE)
+    # Define the patterns to clean the text
+    header_pattern = re.compile(r"^(Subject|From|Distribution|Organization|Lines):.*$", re.MULTILINE)
     email_pattern = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b")
     id_pattern = re.compile(r"\b\d{5,}\b")
     special_char_pattern = re.compile(r"[^a-zA-Z0-9\s]")
     non_ascii_pattern = re.compile(r"[^\x00-\x7F]+")
     multiple_spaces_pattern = re.compile(r"\s+")
 
-    if stop_words is None:
-        stop_words = set(stopwords.words("english"))
-
     cleaned_texts = np.empty_like(texts, dtype=object)
 
-    for i in tqdm(range(len(texts)), desc="Cleaning Text", unit="doc"):
-        text = texts[i]
-        text = header_pattern.sub("", text)
-        text = email_pattern.sub("", text)
-        text = id_pattern.sub("", text)
+    for i, text in enumerate(texts):
+        # Apply the regex patterns to clean the text
+        text = header_pattern.sub(" ", text)
+        text = email_pattern.sub(" ", text)
+        text = id_pattern.sub(" ", text)
         text = special_char_pattern.sub(" ", text)
         text = non_ascii_pattern.sub(" ", text)
-        text = text.lower()
         text = multiple_spaces_pattern.sub(" ", text).strip()
-        tokens = text.split()
-        tokens = [word for word in tokens if word not in stop_words]
-        text = " ".join(tokens)
+
+        # Lowercase and remove stop words
+        text = text.lower()
+        text = " ".join(word for word in text.split() if word not in stop_words)
+
         cleaned_texts[i] = text
 
     return cleaned_texts
 
 
-def tokenize_text(texts: Union[np.ndarray, list], tokenizer=None, num_workers: int = 2, max_workers: Optional[int] = None) -> np.ndarray:
-    if isinstance(texts, list):
-        texts = np.array(texts, dtype=object)
-
-    if texts.dtype != object:
-        raise ValueError("The NumPy array must contain string objects.")
-
-    if tokenizer is None:
-        tokenizer = TOKENIZER
-
-    with ThreadPoolExecutor(max_workers=(max_workers or num_workers)) as executor:
-        tokenized_texts = list(
-            tqdm(
-                executor.map(tokenizer.tokenize, texts),
-                total=len(texts),
-                desc="Tokenizing Texts",
-                unit="doc",
-            )
-        )
-
+def tokenize_texts(texts: np.ndarray, num_workers: int = 2) -> np.ndarray:
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        tokenized_texts = list(tqdm(executor.map(TOKENIZER.tokenize, texts), total=len(texts), desc="Tokenizing texts", unit="doc"))
     return np.array(tokenized_texts, dtype=object)
 
 
-def build_vocab(tokenized_texts: np.ndarray, min_freq: int = 2, save_path: Optional[str] = "./vocab.json") -> Dict[str, int]:
-    word_counter: Counter = Counter()
-    for tokens in tokenized_texts:
-        word_counter.update(tokens)
-
-    vocab: Dict[str, int] = {word: idx + 1 for idx, (word, freq) in enumerate(word_counter.items()) if freq >= min_freq}
+def build_vocab(tokenized_texts: np.ndarray, vocab_path: str, min_freq: int = 2) -> Dict[str, int]:
+    counter = Counter(word for tokens in tokenized_texts for word in tokens)
+    vocab = {word: idx + 1 for idx, (word, freq) in enumerate(counter.items()) if freq >= min_freq}
     vocab["<PAD>"] = 0
 
-    if save_path:
-        with open(save_path, "w") as f:
-            json.dump(vocab, f)
-        print(f"[INFO] Vocabulary saved to {save_path}")
-
-    print(f"[INFO] Vocabulary Size: {len(vocab)} words")
+    with open(vocab_path, "w") as f:
+        json.dump(vocab, f)
+    print(f"[INFO] Vocabulary saved to {vocab_path}, size: {len(vocab)}")
     return vocab
 
 
 def encode_texts(tokenized_texts: np.ndarray, vocab: Dict[str, int], max_length: int = 50) -> np.ndarray:
-    encoded_texts = np.zeros((len(tokenized_texts), max_length), dtype=np.int32)
-
-    for i, tokens in enumerate(tokenized_texts):
-        encoded = [vocab.get(word, 0) for word in tokens[:max_length]]
-        encoded_texts[i, : len(encoded)] = encoded
-
-    return encoded_texts
+    return np.array([[vocab.get(word, 0) for word in tokens[:max_length]] + [0] * (max_length - len(tokens)) for tokens in tokenized_texts])
 
 
-def train_pipeline(
-    train_dir: str,
-    num_epochs: int = 1,
-    lr: float = 0.001,
-    batch_size: int = 16,
-    subset_size: int = 50,
-    num_subsets: int = 1,
-    embed_dim: int = 32,
-    hidden_dim: int = 64,
-    max_length: int = 50,
-    num_workers: int = 2,
-    vocab_save_path: str = "./vocab.json",
-    stop_words: Optional[set] = None,
-    device: Optional[torch.device] = None,
-) -> None:
-    train_texts, train_labels, _, _ = load_20news_data(directory=train_dir, num_workers=num_workers)
-    train_tokens = tokenize_text(texts=clean_text(train_texts, stop_words=stop_words), num_workers=num_workers)
-    vocab = build_vocab(tokenized_texts=train_tokens, min_freq=1, save_path=vocab_save_path)
-    train_sequences = encode_texts(tokenized_texts=train_tokens, vocab=vocab, max_length=max_length)
+def train_pipeline(config: Dict) -> None:
+    train_texts, train_labels, _ = load_data(config["train_dir"], config["num_workers"])
+    train_texts = clean_texts(train_texts)
+    train_tokens = tokenize_texts(train_texts, config["num_workers"])
+    vocab = build_vocab(train_tokens, min_freq=1, vocab_path=config["vocab_path"])
+    train_sequences = encode_texts(train_tokens, vocab, max_length=config["max_length"])
 
-    model = LSTMClassifier(vocab_size=len(vocab), embed_dim=embed_dim, hidden_dim=hidden_dim)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = LSTMClassifier(len(vocab), config["embed_dim"], config["hidden_dim"])
+    seeds = derive_pi_seeds(config["num_subsets"])
 
-    pi_seeds = derive_pi_seed(num_subsets)
-
-    all_indices = np.array([], dtype=int)
-    for seed in pi_seeds:
+    selected_indices = []
+    for seed in seeds:
         np.random.seed(seed)
-        indices = np.random.choice(len(train_labels), subset_size, replace=False)
-        all_indices = np.concatenate((all_indices, indices), axis=None)
+        selected_indices.extend(np.random.choice(len(train_labels), config["subset_size"], replace=False))
 
-    subset_data = train_sequences[all_indices]
-    subset_labels = train_labels[all_indices]
+    subset_data = train_sequences[selected_indices]
+    subset_labels = train_labels[selected_indices]
 
-    train_dataset = SubsetDataset(
-        full_data=subset_data,
-        full_labels=subset_labels,
-        sample_size=subset_size,
-        seed=np.random.randint(1000),
-    )
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(TextDataset(subset_data, subset_labels), batch_size=config["batch_size"], shuffle=True)
 
-    model.train_model(train_loader=train_loader, num_epochs=num_epochs, lr=lr, device=device)
+    model.train_model(train_loader, config["num_epochs"], config["lr"], device)
+    model.save(config["model_path"])
 
 
-def evaluate_pipeline(
-    test_dir: str,
-    vocab_path: str,
-    model_path: str,
-    max_length: int = 50,
-    batch_size: int = 64,  # Increased batch size for faster processing
-    num_workers: int = 2,
-    device: Optional[torch.device] = None,
-    subset_size: Optional[int] = None,  # To evaluate on a subset if needed
-) -> None:
-    test_texts, test_labels, _, _ = load_20news_data(directory=test_dir, num_workers=num_workers)
+def evaluate_pipeline(config: Dict) -> None:
+    test_texts, test_labels, _ = load_data(config["test_dir"], config["num_workers"])
+    test_texts = clean_texts(test_texts)
+    test_tokens = tokenize_texts(test_texts, config["num_workers"])
+    vocab = load_vocab(config["vocab_path"])
+    test_sequences = encode_texts(test_tokens, vocab, max_length=config["max_length"])
 
-    if subset_size is not None and subset_size < len(test_texts):
-        idxs = np.random.choice(len(test_texts), subset_size, replace=False)
-        test_texts = test_texts[idxs]
-        test_labels = test_labels[idxs]
+    if config.get("subset_size") is not None:
+        selected_indices = np.random.choice(len(test_labels), config["subset_size"], replace=False)
+        test_sequences, test_labels = test_sequences[selected_indices], test_labels[selected_indices]
 
-    vocab = load_vocab(vocab_path)
-    test_tokens = tokenize_text(texts=clean_text(test_texts))
-    test_sequences = encode_texts(tokenized_texts=test_tokens, vocab=vocab, max_length=max_length)
+    test_loader = DataLoader(TextDataset(test_sequences, test_labels), batch_size=config["batch_size"], shuffle=False)
 
-    test_dataset = NewsDataset(encoded_texts=test_sequences, labels=test_labels)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = LSTMClassifier.from_pretrained(len(vocab), config["embed_dim"], config["hidden_dim"], config["model_path"], device)
 
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LSTMClassifier.from_pretrained(path=model_path, device=device)
     model.eval()
-
-    all_preds = []
-    all_labels = []
+    all_preds, all_labels = [], []
 
     with torch.no_grad():
-        progress_bar = tqdm(test_loader, desc="Evaluating", unit="batch")
-        for inputs, labels in progress_bar:
+        for inputs, labels in tqdm(test_loader, desc="Evaluating", unit="batch"):
             inputs = inputs.to(device)
-            labels = labels.to(device)
 
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
 
             all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
+            all_labels.extend(labels.numpy())
 
     accuracy = accuracy_score(all_labels, all_preds)
     print(f"[INFO] Test Accuracy: {accuracy:.4f}")
 
 
-def load_vocab(path: str) -> Dict[str, int]:
-    with open(path, "r") as f:
+def load_vocab(vocab_path: str) -> Dict[str, int]:
+    with open(vocab_path, "r") as f:
         vocab = json.load(f)
-    print(f"[INFO] Vocabulary loaded from {path}")
+    print(f"[INFO] Vocabulary loaded from {vocab_path}")
     return vocab
 
 
-class NewsDataset(Dataset):
-    def __init__(self, encoded_texts: np.ndarray, labels: np.ndarray) -> None:
-        self.data = torch.tensor(encoded_texts, dtype=torch.long)
-        self.labels = torch.tensor(labels, dtype=torch.long)
-
-    def __len__(self) -> int:
-        return len(self.labels)
-
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.data[idx], self.labels[idx]
-
-
 if __name__ == "__main__":
-    train_dir = "./data/20news-bydate-train/"
-    test_dir = "./data/20news-bydate-test/"
+    config = {
+        "train_dir": "./data/20news-bydate-train/",
+        "test_dir": "./data/20news-bydate-test/",
+        "vocab_path": "./vocab.json",
+        "model_path": "./model.pth",
+        "num_epochs": 1,
+        "lr": 0.001,
+        "batch_size": 64,
+        "subset_size": 50,
+        "num_subsets": 1,
+        "embed_dim": 32,
+        "hidden_dim": 64,
+        "max_length": 50,
+        "num_workers": 8,
+    }
 
-    train_pipeline(
-        train_dir=train_dir,
-        num_epochs=1,
-        lr=0.001,
-        batch_size=16,
-        subset_size=50,
-        num_subsets=1,
-        embed_dim=32,
-        hidden_dim=64,
-        max_length=50,
-    )
-    evaluate_pipeline(
-        test_dir=test_dir,
-        vocab_path="./vocab.json",
-        model_path="./model.pth",
-        max_length=50,
-        batch_size=64,  # Increased for faster evaluation
-    )
+    train_pipeline(config)
+    evaluate_pipeline(config)
