@@ -273,11 +273,17 @@ def evaluate_pipeline(
     vocab_path: str,
     model_path: str,
     max_length: int = 50,
-    batch_size: int = 16,
+    batch_size: int = 64,  # Increased batch size for faster processing
     num_workers: int = 2,
     device: Optional[torch.device] = None,
+    subset_size: Optional[int] = None,  # To evaluate on a subset if needed
 ) -> None:
     test_texts, test_labels, _, _ = load_20news_data(directory=test_dir, num_workers=num_workers)
+
+    if subset_size is not None and subset_size < len(test_texts):
+        idxs = np.random.choice(len(test_texts), subset_size, replace=False)
+        test_texts = test_texts[idxs]
+        test_labels = test_labels[idxs]
 
     vocab = load_vocab(vocab_path)
     test_tokens = tokenize_text(texts=clean_text(test_texts))
@@ -344,4 +350,10 @@ if __name__ == "__main__":
         hidden_dim=64,
         max_length=50,
     )
-    evaluate_pipeline(test_dir=test_dir, vocab_path="./vocab.json", model_path="./model.pth", max_length=50, batch_size=16)
+    evaluate_pipeline(
+        test_dir=test_dir,
+        vocab_path="./vocab.json",
+        model_path="./model.pth",
+        max_length=50,
+        batch_size=64,  # Increased for faster evaluation
+    )
