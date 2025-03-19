@@ -88,18 +88,23 @@ def load_data(directory: str, num_workers: int = 2) -> Tuple[np.ndarray, np.ndar
     category_map = {cat: idx for idx, cat in enumerate(sorted(os.listdir(directory)))}
     texts, labels = [], []
 
+    # Collect texts and labels
     for category, cat_id in tqdm(category_map.items(), desc="Loading data", unit="category"):
         category_path = os.path.join(directory, category)
         if os.path.isdir(category_path):
-            file_paths = [os.path.join(category_path, f) for f in os.listdir(category_path)]
+            file_paths = (os.path.join(category_path, f) for f in os.listdir(category_path))
             with ThreadPoolExecutor(max_workers=num_workers) as executor:
                 results = list(executor.map(read_file, file_paths))
             valid_texts = [r for r in results if r is not None]
             texts.extend(valid_texts)
             labels.extend([cat_id] * len(valid_texts))
 
+    # Use numpy directly
+    texts_array = np.array(texts, dtype=object)
+    labels_array = np.array(labels, dtype=np.int32)
+
     print(f"[INFO] Loaded {len(texts)} documents from {len(category_map)} categories.")
-    return np.array(texts, dtype=object), np.array(labels, dtype=np.int32), category_map
+    return texts_array, labels_array, category_map
 
 
 def read_file(file_path: str) -> Optional[str]:
@@ -115,26 +120,23 @@ def clean_texts(texts: np.ndarray) -> np.ndarray:
     stop_words = set(stopwords.words("english"))
 
     # Define the patterns to clean the text
-    header_pattern = re.compile(r"^(Subject|From|Distribution|Organization|Lines):.*$", re.MULTILINE)
-    email_pattern = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b")
-    id_pattern = re.compile(r"\b\d{5,}\b")
-    special_char_pattern = re.compile(r"[^a-zA-Z0-9\s]")
-    non_ascii_pattern = re.compile(r"[^\x00-\x7F]+")
-    multiple_spaces_pattern = re.compile(r"\s+")
+    patterns = [
+        re.compile(r"^(Subject|From|Distribution|Organization|Lines):.*$", re.MULTILINE),
+        re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"),
+        re.compile(r"\b\d{5,}\b"),
+        re.compile(r"[^a-zA-Z0-9\s]"),
+        re.compile(r"[^\x00-\x7F]+"),
+        re.compile(r"\s+"),
+    ]
 
     cleaned_texts = np.empty_like(texts, dtype=object)
 
-    for i, text in enumerate(texts):
-        # Apply the regex patterns to clean the text
-        text = header_pattern.sub(" ", text)
-        text = email_pattern.sub(" ", text)
-        text = id_pattern.sub(" ", text)
-        text = special_char_pattern.sub(" ", text)
-        text = non_ascii_pattern.sub(" ", text)
-        text = multiple_spaces_pattern.sub(" ", text).strip()
+    for i, text in enumerate(tqdm(texts, desc="Cleaning texts", unit="doc")):
+        for pattern in patterns:
+            text = pattern.sub(" ", text)
 
         # Lowercase and remove stop words
-        text = text.lower()
+        text = text.lower().strip()
         text = " ".join(word for word in text.split() if word not in stop_words)
 
         cleaned_texts[i] = text
@@ -143,8 +145,13 @@ def clean_texts(texts: np.ndarray) -> np.ndarray:
 
 
 def tokenize_texts(texts: np.ndarray, num_workers: int = 2) -> np.ndarray:
+    # Direct computation with numpy, avoiding unnecessary list wrapping
+    def tokenize_single(text):
+        return TOKENIZER.tokenize(text)
+
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        tokenized_texts = list(tqdm(executor.map(TOKENIZER.tokenize, texts), total=len(texts), desc="Tokenizing texts", unit="doc"))
+        tokenized_texts = list(tqdm(executor.map(tokenize_single, texts), total=len(texts), desc="Tokenizing texts", unit="doc"))
+
     return np.array(tokenized_texts, dtype=object)
 
 
