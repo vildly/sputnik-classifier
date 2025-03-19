@@ -10,14 +10,11 @@ import nltk
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from sklearn.utils import resample
-from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
-from sklearn.decomposition import PCA
-import matplotlib.colors as colors
 import matplotlib.pyplot as plt
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, accuracy_score
 
 
 def read_file(file_path: str) -> str:
@@ -93,13 +90,54 @@ if __name__ == "__main__":
     nltk.download("stopwords")
 
     # Load train and test datasets
-    data: np.ndarray
-    labels: np.ndarray
-    data, labels = load_dir("./data/20news-bydate-train")
+    train_data: np.ndarray
+    train_labels: np.ndarray
+    train_data, train_labels = load_dir("./data/20news-bydate-train")
+
+    test_data: np.ndarray
+    test_labels: np.ndarray
+    test_data, test_labels = load_dir("./data/20news-bydate-test")
 
     # Clean the text in DataFrame
-    data = clean_texts(data)
+    cleaned_train_data = clean_texts(train_data)
+    cleaned_test_data = clean_texts(test_data)
 
     # Create a DataFrame
-    df: pd.DataFrame = pd.DataFrame(data={"text": data, "label": labels})
-    print(df.head())
+    train_df: pd.DataFrame = pd.DataFrame(data={"text": cleaned_train_data, "label": train_labels})
+    print(train_df.head())
+    test_df: pd.DataFrame = pd.DataFrame(data={"text": cleaned_test_data, "label": test_labels})
+    print(test_df.head())
+
+    # Vectorize text data
+    vectorizer = TfidfVectorizer(max_features=1000)
+    X_train_tfidf = vectorizer.fit_transform(cleaned_train_data)
+    X_test_tfidf = vectorizer.transform(cleaned_test_data)
+
+    # Initialize and train the SVM classifier
+    clf_svm = SVC(kernel="linear", random_state=42)
+    clf_svm.fit(X_train_tfidf, train_labels)
+
+    # Predict and evaluate the model on test data
+    train_predictions = clf_svm.predict(X_train_tfidf)
+    test_predictions = clf_svm.predict(X_test_tfidf)
+
+    # Print training and test set performance
+    print("Training Accuracy:", accuracy_score(train_labels, train_predictions))
+    print("Test Accuracy:", accuracy_score(test_labels, test_predictions))
+
+    # Detailed report
+    print("Classification Report on Test Data:")
+    print(classification_report(test_labels, test_predictions))
+
+    # Confusion Matrix and Seaborn Heatmap
+    conf_matrix = confusion_matrix(test_labels, test_predictions)
+    plt.figure(figsize=(10, 8))
+
+    # Convert labels to a list of strings
+    unique_labels = [str(label) for label in np.unique(test_labels)]
+
+    sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=unique_labels, yticklabels=unique_labels)
+    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.show()
