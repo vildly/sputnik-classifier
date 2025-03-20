@@ -7,13 +7,15 @@ from string import punctuation
 import os
 import concurrent.futures
 import nltk
-import pandas as pd
+from mpmath import mp
 import numpy as np
 import seaborn as sns
+from tqdm import tqdm
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 
 
@@ -30,6 +32,7 @@ def load_dir(path: str) -> Tuple[np.ndarray, np.ndarray]:
     file_labels: np.ndarray = np.empty(initial_size, dtype=object)
     file_count: int = 0
 
+    print("Initializing files...")
     for root, dirs, _ in os.walk(path):
         for category in dirs:
             category_path: str = os.path.join(root, category)
@@ -51,15 +54,14 @@ def load_dir(path: str) -> Tuple[np.ndarray, np.ndarray]:
     file_labels = file_labels[:file_count]
 
     # Use concurrent.futures to read files in parallel
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        results: List[str] = list(executor.map(read_file, file_paths))
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results: List[str] = list(tqdm(iterable=executor.map(read_file, file_paths), desc="Reading files", total=file_count, unit="files"))
 
     # Convert results to numpy array
     data: np.ndarray = np.array(results, dtype=object)
     labels: np.ndarray = np.array(file_labels, dtype=object)
 
     print(f"Loaded {file_count} files")
-    print("Returning as (data: np.ndarray, labels: np.ndarray)")
     return data, labels
 
 
@@ -68,7 +70,7 @@ def clean_texts(texts: np.ndarray, lang: str = "english") -> np.ndarray:
     print("This may take a while...")
     cleaned_texts: np.ndarray = np.empty_like(texts, dtype=object)
 
-    for ix, text in enumerate(texts):
+    for ix, text in tqdm(iterable=enumerate(texts), desc="Cleaning texts", total=len(texts), unit="texts"):
         text = text.lower()
         # Remove punctuation
         translator: Dict[int, int | None] = str.maketrans("", "", punctuation)
@@ -81,7 +83,7 @@ def clean_texts(texts: np.ndarray, lang: str = "english") -> np.ndarray:
 
         cleaned_texts[ix] = " ".join(filtered_words)
 
-    print("Texts cleaned")
+    print(f"{len(cleaned_texts)} texts cleaned")
     return cleaned_texts
 
 
@@ -98,39 +100,59 @@ if __name__ == "__main__":
     test_labels: np.ndarray
     test_data, test_labels = load_dir("./data/20news-bydate-test")
 
-    # Clean the text in DataFrame
-    cleaned_train_data = clean_texts(train_data)
-    cleaned_test_data = clean_texts(test_data)
+    # Combine the datasets
+    print("Combining datasets")
+    combined_data: np.ndarray = np.concatenate((train_data, test_data), axis=0)
+    combined_labels: np.ndarray = np.concatenate((train_labels, test_labels), axis=0)
 
-    # Create a DataFrame
-    train_df: pd.DataFrame = pd.DataFrame(data={"text": cleaned_train_data, "label": train_labels})
-    print(train_df.head())
-    test_df: pd.DataFrame = pd.DataFrame(data={"text": cleaned_test_data, "label": test_labels})
-    print(test_df.head())
+    # Clean the text in DataFrame
+    clean_combined_data = clean_texts(combined_data)
+
+    # Set the precision for pi (decimal places)
+    mp.dps = 50
+    seed = float(str(mp.pi)[2:5])
+
+    # Split data using the seed
+    print("Splitting data")
+    X_train, X_test, y_train, y_test = train_test_split(clean_combined_data, combined_labels, test_size=0.2, random_state=seed)
+
+    # Use CountVectorizer to find the vocabulary size
+    print("Calculating vocabulary size to max_features")
+    count_vectorizer = CountVectorizer()
+    count_vectorizer.fit(clean_combined_data)
+    vocabulary_size = len(count_vectorizer.vocabulary_)
+
+    # Calculate max_features based on the square root of the vocabulary size
+    max_features = int(np.sqrt(vocabulary_size))
 
     # Vectorize text data
-    vectorizer = TfidfVectorizer(max_features=1000)
-    X_train_tfidf = vectorizer.fit_transform(cleaned_train_data)
-    X_test_tfidf = vectorizer.transform(cleaned_test_data)
+    print("Vectorizing text data")
+    vectorizer = TfidfVectorizer(max_features=max_features)
+    X_train_tfidf = vectorizer.fit_transform(X_train)
+    X_test_tfidf = vectorizer.transform(X_test)
 
     # Initialize and train the SVM classifier
-    clf_svm = SVC(kernel="linear", random_state=42)
-    clf_svm.fit(X_train_tfidf, train_labels)
+    clf_svm = SVC(kernel="linear", random_state=seed, probability=True)
+    clf_svm.fit(X_train_tfidf, y_train)
 
     # Predict and evaluate the model on test data
-    train_predictions = clf_svm.predict(X_train_tfidf)
-    test_predictions = clf_svm.predict(X_test_tfidf)
+    print("Evaluating model")
+    print("This may take a while...")
+    train_pred = clf_svm.predict(X_train_tfidf)
+    test_pred = clf_svm.predict(X_test_tfidf)
 
     # Print training and test set performance
-    print("Training Accuracy:", accuracy_score(train_labels, train_predictions))
-    print("Test Accuracy:", accuracy_score(test_labels, test_predictions))
+    train_accuracy = accuracy_score(y_train, train_pred)
+    print("Training Accuracy:", train_accuracy)
+    test_accuracy = accuracy_score(y_test, test_pred)
+    print("Test Accuracy:", test_accuracy)
 
     # Detailed report
-    print("Classification Report on Test Data:")
-    print(classification_report(test_labels, test_predictions))
+    print("Classification report on test data")
+    print(classification_report(y_test, test_pred))
 
     # Confusion Matrix and Seaborn Heatmap
-    conf_matrix = confusion_matrix(test_labels, test_predictions)
+    conf_matrix = confusion_matrix(y_test, test_pred)
     plt.figure(figsize=(10, 8))
 
     # Convert labels to a list of strings

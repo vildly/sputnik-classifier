@@ -1,3 +1,7 @@
+# rnn.py
+#
+# lstm: https://coderzcolumn.com/tutorials/artificial-intelligence/pytorch-lstm-for-text-classification-tasks
+# rnn: https://coderzcolumn.com/tutorials/artificial-intelligence/pytorch-rnn-for-text-classification-tasks
 import re
 import os
 import concurrent.futures
