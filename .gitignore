@@ -47,3 +47,8 @@ gha-kubeconfig-*
 **/*.pth
 test_set.json
 vocab.json
+
+# Ignore generated files
+**/*.npy
+**/*.npz
+**/*.pkl
