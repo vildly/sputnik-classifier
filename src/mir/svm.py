@@ -11,7 +11,7 @@ from mpmath import mp
 import numpy as np
 import seaborn as sns
 from tqdm import tqdm
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
@@ -20,8 +20,10 @@ from sklearn.metrics import classification_report, accuracy_score
 
 
 class CLF_svm:
-    def __init__(self, seed: int) -> None:
-        self.clf = SVC(kernel="linear", random_state=seed, probability=True)
+    def __init__(self) -> None:
+        # Adding random_state and probability=True ensures reproducibility
+        # but slows down the training process.
+        self.clf = SVC(kernel="linear")
         self.vectorizer = TfidfVectorizer()
 
     def fit(self, X: Any, y: Any) -> None:
@@ -133,10 +135,10 @@ if __name__ == "__main__":
     print("Loading 20 news data")
     train_data: np.ndarray
     train_labels: np.ndarray
-    train_data, train_labels = load_20newsdata("./data/20news-bydate-train", max=500)
+    train_data, train_labels = load_20newsdata("./data/20news-bydate-train", max=5000)
     test_data: np.ndarray
     test_labels: np.ndarray
-    test_data, test_labels = load_20newsdata("./data/20news-bydate-test", max=500)
+    test_data, test_labels = load_20newsdata("./data/20news-bydate-test", max=5000)
 
     print("Combining datasets")
     combined_data: np.ndarray = np.concatenate((train_data, test_data), axis=0)
@@ -145,41 +147,79 @@ if __name__ == "__main__":
     print("Cleaning combined data")
     clean_combined_data = clean_texts(combined_data)
 
-    # TODO: 10 or more iterations here for cross-validation
-    # Set the precision for pi (decimal places)
-    mp.dps = 50  # TODO: Change this to dynamic value
-    seed = int(str(mp.pi)[2:5])
+    k = 10
+    # Ensures that pi has enough decimal places for the seed
+    mp.dps = 3 * k + 2
+    # Get the required sequence of decimals
+    pi_str = str(mp.pi)[2 : 3 * k + 2]
+    accuracies = np.zeros(k)
+    clf_reports = np.empty(k, dtype=object)
+    conf_matrices = np.empty(k, dtype=object)
+    precision_scores = np.zeros((k, len(np.unique(combined_labels))))
+    recall_scores = np.zeros((k, len(np.unique(combined_labels))))
+    f1_scores = np.zeros((k, len(np.unique(combined_labels))))
+    support_scores = np.zeros((k, len(np.unique(combined_labels))))
 
-    print("Splitting data")
-    print("This may take a moment depending on the amount of data...")
-    X_train, X_test, y_train, y_test = train_test_split(clean_combined_data, combined_labels, test_size=0.2, random_state=seed)
+    for i in range(k):
+        seed = int(pi_str[i * 3 : i * 3 + 3])  # Gets the next 3 decimal places of pi
+        print(f"[k{i}] Seed: {seed}")
 
-    print("Training model")
-    print("This may take a very long time (depending on the amount of data)...")
-    clf_svm = CLF_svm(seed=seed)
-    clf_svm.fit(X_train, y_train)
+        print(f"[k{i}] Splitting data")
+        print("This may take a moment depending on the amount of data...")
+        X_train, X_test, y_train, y_test = train_test_split(clean_combined_data, combined_labels, test_size=0.2, random_state=seed)
 
-    print("Evaluating model")
-    print("This may take a while...")
-    test_pred = clf_svm.predict(X_test)
+        print(f"[k{i}] Training model")
+        print("This may take a very long time (depending on the amount of data)...")
+        clf_svm = CLF_svm()
+        clf_svm.fit(X_train, y_train)
 
-    # Print training and test set performance
-    test_accuracy = accuracy_score(y_test, test_pred)
-    print("Test Accuracy:", test_accuracy)
+        print(f"[k{i}] Evaluating model")
+        print("This may take a while...")
+        test_pred = clf_svm.predict(X_test)
 
-    # Detailed report
-    print("Classification report on test data")
-    print(classification_report(y_test, test_pred))
+        print(f"[k{i}] Adding accuracy to list")
+        accuracies[i] = accuracy_score(y_test, test_pred)
 
-    # Confusion Matrix and Seaborn Heatmap
-    conf_matrix = confusion_matrix(y_test, test_pred)
+        print(f"[k{i}] Generating classification report")
+        clf_reports[i] = classification_report(y_test, test_pred)
+        precision, recall, f1, support = precision_recall_fscore_support(y_test, test_pred, average=None)
+        precision_scores[i] = precision
+        recall_scores[i] = recall
+        f1_scores[i] = f1
+        support_scores[i] = support
+
+        print(f"[k{i}] Generating confusion matrix")
+        conf_matrices[i] = confusion_matrix(y_test, test_pred)
+
+    # Final evaluation
+    # Aggregated classification report
+    aggregated_precision = np.mean(precision_scores, axis=0)
+    aggregated_recall = np.mean(recall_scores, axis=0)
+    aggregated_f1 = np.mean(f1_scores, axis=0)
+    aggregated_support = np.sum(support_scores, axis=0)
+
+    print("Aggregate classification report:")
+    for label_idx, label in enumerate(np.unique(combined_labels)):
+        print(
+            f"Label {label} - Precision: {aggregated_precision[label_idx]:.4f}\n"
+            f"Recall: {aggregated_recall[label_idx]:.4f}\n"
+            f"F1 Score: {aggregated_f1[label_idx]:.4f}\n"
+            f"Support: {aggregated_support[label_idx]}"
+        )
+
+    # Combine all confusion matrices
+    combined_conf_matrix = np.sum(np.array(conf_matrices), axis=0)
+
     plt.figure(figsize=(10, 8))
 
-    # Convert labels to a list of strings
-    unique_labels = [str(label) for label in np.unique(y_test)]
+    # WARNING:
+    # Using the combined labels here may not always work as expected
+    # instead aim to save the y_test from each iteration to an array
+    # and then extract each unique label from that.
+    unique_labels = [str(label) for label in np.unique(combined_labels)]
 
-    sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=unique_labels, yticklabels=unique_labels)
-    plt.title("Confusion Matrix")
+    sns.heatmap(combined_conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=unique_labels, yticklabels=unique_labels)
+    plt.title("Combined Confusion Matrix Across All Folds")
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
     plt.show()
