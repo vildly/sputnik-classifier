@@ -5,7 +5,31 @@ import random
 import concurrent.futures
 import numpy as np
 from tqdm import tqdm
-from typing import List, Tuple, Union
+import nltk
+from string import punctuation
+from typing import Dict, List, Set, Generator, Tuple, Union
+
+
+def clean_texts(texts: np.ndarray, lang: str = "english") -> np.ndarray:
+    cleaned_texts: np.ndarray = np.empty_like(texts, dtype=object)
+
+    for ix, text in tqdm(iterable=enumerate(texts), desc="Cleaning texts", total=len(texts), unit="texts"):
+        # Lowercase
+        text = text.lower()
+
+        # Remove punctuation
+        translator: Dict[int, int | None] = str.maketrans("", "", punctuation)
+        text = text.translate(translator)
+
+        # Remove stopwords
+        words: List[str] = nltk.word_tokenize(text)
+        stop_words: Set[str] = set(nltk.corpus.stopwords.words(lang))
+        filtered_words: Generator[str, None, None] = (word for word in words if word not in stop_words)
+
+        cleaned_texts[ix] = " ".join(filtered_words)
+
+    print(f"{len(cleaned_texts)} texts cleaned")
+    return cleaned_texts
 
 
 def _read_file(file_path: str) -> str:
@@ -48,7 +72,14 @@ def load_20newsdata(paths: List[str], max_docs: Union[int, None] = None) -> Tupl
     # Read file contents in parallel
     ########################################################################
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        files_read = list(tqdm(executor.map(_read_file, file_paths), desc="Reading files", total=file_count, unit="files"))
+        files_read = list(
+            tqdm(
+                executor.map(_read_file, file_paths),
+                desc="Reading files",
+                total=file_count,
+                unit="files",
+            )
+        )
 
     data = np.array(files_read, dtype=object)
     labels = np.array(file_labels, dtype=object)
@@ -83,6 +114,7 @@ def sample_data(paths: List[str], out="sample.json", size: Union[int, None] = No
     for i, lbl in enumerate(labels):
         category_to_indices.setdefault(lbl, []).append(i)
 
+    # Deterministic seed from pi
     pi_seed = int(str(math.pi)[2:9])
     random.seed(pi_seed)
 
@@ -113,6 +145,12 @@ def sample_data(paths: List[str], out="sample.json", size: Union[int, None] = No
     random.shuffle(final_indices)
 
     ########################################################################
+    # Clean only the subset of texts chosen for final sampling
+    ########################################################################
+    final_texts = texts[final_indices]
+    cleaned_texts = clean_texts(final_texts, lang="english")
+
+    ########################################################################
     # Build category mapping and JSON structure
     ########################################################################
     unique_categories = sorted(category_to_indices.keys())
@@ -120,8 +158,8 @@ def sample_data(paths: List[str], out="sample.json", size: Union[int, None] = No
 
     json_data = {"seed": pi_seed, "categories": category_mapping, "articles": []}
 
-    for idx in final_indices:
-        json_data["articles"].append({"user_input": texts[idx], "reference": labels[idx], "agent_response": ""})
+    for i, idx in enumerate(final_indices):
+        json_data["articles"].append({"user_input": cleaned_texts[i], "reference": labels[idx], "agent_response": ""})
 
     ########################################################################
     # Informative printing about final sampled distribution
@@ -144,4 +182,4 @@ def sample_data(paths: List[str], out="sample.json", size: Union[int, None] = No
 
 
 if __name__ == "__main__":
-    sample_data(paths=["./data/20news-bydate-test", "./data/20news-bydate-train"], out="sample.json", size=1000)
+    sample_data(paths=["./data/20news-bydate-test", "./data/20news-bydate-train"], out="./data/sample.json", size=1000)
