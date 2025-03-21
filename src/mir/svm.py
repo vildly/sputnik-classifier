@@ -136,10 +136,10 @@ if __name__ == "__main__":
     print("Loading 20 news data")
     train_data: np.ndarray
     train_labels: np.ndarray
-    train_data, train_labels = load_20newsdata("./data/20news-bydate-train", max=500)
+    train_data, train_labels = load_20newsdata("./data/20news-bydate-train")
     test_data: np.ndarray
     test_labels: np.ndarray
-    test_data, test_labels = load_20newsdata("./data/20news-bydate-test", max=500)
+    test_data, test_labels = load_20newsdata("./data/20news-bydate-test")
 
     print("Combining datasets")
     combined_data: np.ndarray = np.concatenate((train_data, test_data), axis=0)
