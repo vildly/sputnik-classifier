@@ -7,3 +7,9 @@ The text classifier
 ## Ragas metrics
 
 ![ragas metrics](./.readme/ragas.png)
+
+## Bar
+![Bar](./.readme/bar.png)
+
+## Viol 
+![Viol](./.readme/viol.png)
