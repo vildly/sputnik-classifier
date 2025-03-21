@@ -52,3 +52,4 @@ vocab.json
 **/*.npy
 **/*.npz
 **/*.pkl
+**/*sample.json
