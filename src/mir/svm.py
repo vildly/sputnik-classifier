@@ -2,7 +2,7 @@
 #
 # Partially used guide:
 # https://codemax.app/snippet/introduction-to-text-classification-with-support-vector-machines-svm/
-from typing import Dict, Generator, Set, Tuple, List, Union
+from typing import Dict, Generator, Set, Tuple, List, Union, Any
 from string import punctuation
 import os
 import concurrent.futures
@@ -17,8 +17,44 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
-from scipy.sparse import save_npz, load_npz
-import joblib
+
+
+class CLF_svm:
+    def __init__(self, seed: int) -> None:
+        self.clf = SVC(kernel="linear", random_state=seed, probability=True)
+        self.vectorizer = TfidfVectorizer()
+
+    def fit(self, X: Any, y: Any) -> None:
+        """
+        Vectorizes and fits the model of the data.
+
+        Parameters
+        ----------
+        X : Any -- Data to fit the model to. Accepted inputs are lists, numpy arrays, scipy-sparse matrices, or pandas dataframes.
+        y : Any -- Labels for the data. Accepted inputs are lists, numpy arrays, scipy-sparse matrices, or pandas dataframes.
+        """
+        # Vectorize the text data
+        # max_features (maximum number of features to keep)
+        max_features = int(np.sqrt(len(X) * (len(X[0]) * 0.2)))
+        # max_df (ignore terms that appear in more than 80% of the documents)
+        max_df = 0.8
+        self.vectorizer = TfidfVectorizer(max_features=max_features, max_df=max_df)
+        self.clf.fit(self.vectorizer.fit_transform(X), y)
+
+    def predict(self, X: Any) -> Any:
+        """
+        Vectorizes and predicts the labels of the data.
+
+        Parameters
+        ----------
+        data : Any -- Data to predict labels for. Accepted inputs are lists, numpy arrays, scipy-sparse matrices, or pandas dataframes.
+
+        Returns
+        -------
+        Any -- Predicted labels.
+        """
+        # Transform the data with the already fitted vectorizer and predict the labels
+        return self.clf.predict(self.vectorizer.transform(X))
 
 
 def _read_file(file_path: str) -> str:
@@ -28,7 +64,6 @@ def _read_file(file_path: str) -> str:
 
 def load_20newsdata(path: str, max: Union[int, None] = None) -> Tuple[np.ndarray, np.ndarray]:
     print(f"Loading files from {path}")
-    print("This may take a while...")
     initial_size: int = 20
     file_paths: np.ndarray = np.empty(initial_size, dtype=object)
     file_labels: np.ndarray = np.empty(initial_size, dtype=object)
@@ -91,124 +126,44 @@ def clean_texts(texts: np.ndarray, lang: str = "english") -> np.ndarray:
     return cleaned_texts
 
 
-def train_pipeline(
-    model_path: str, X_train_path: str, X_test_path: str, y_train_path: str, y_test_path: str, ignore_existing: bool = False
-) -> None:
-    # Check if file extensions are valid
-    if not all(map(lambda path: path.endswith(".npz"), [X_train_path, X_test_path])):
-        raise ValueError("Invalid file extensions. X_train and X_test should have .npz extensions.")
-
-    if not all(map(lambda path: path.endswith(".npy"), [y_train_path, y_test_path])):
-        raise ValueError("Invalid file extensions. y_train and y_test should have .npy extensions.")
-
-    if not model_path.endswith(".pkl"):
-        raise ValueError("Invalid file extension. Model path should have a .pkl extension.")
-
-    # Check if existing files should be ignored
-    files_exist = os.path.exists(model_path) and all(
-        map(os.path.exists, [X_train_path, X_test_path, y_train_path, y_test_path, model_path])
-    )
-
-    if files_exist and not ignore_existing:
-        print("All files exist and are not being ignored. Skipping all.")
-        return
-
-    if (
-        os.path.exists(X_train_path)
-        and os.path.exists(X_test_path)
-        and os.path.exists(y_train_path)
-        and os.path.exists(y_test_path)
-        and not ignore_existing
-    ):
-        print("Data files exist and ignore_existing is False. Skipping data generation.")
-        return
-    else:
-        nltk.download(info_or_id="punkt", quiet=True)
-        nltk.download(info_or_id="stopwords", quiet=True)
-
-        # Load train and test datasets
-        train_data: np.ndarray
-        train_labels: np.ndarray
-        train_data, train_labels = load_20newsdata("./data/20news-bydate-train")
-
-        test_data: np.ndarray
-        test_labels: np.ndarray
-        test_data, test_labels = load_20newsdata("./data/20news-bydate-test")
-
-        # Combine the datasets
-        print("Combining datasets")
-        combined_data: np.ndarray = np.concatenate((train_data, test_data), axis=0)
-        combined_labels: np.ndarray = np.concatenate((train_labels, test_labels), axis=0)
-
-        # Clean the text in DataFrame
-        clean_combined_data = clean_texts(combined_data)
-
-        # Vectorize the text data
-        # max_features (maximum number of features to keep)
-        max_features = int(np.sqrt(len(clean_combined_data) * (len(clean_combined_data[0]) * 0.2)))
-        # max_df (ignore terms that appear in more than 80% of the documents)
-        max_df = 0.8
-        print(f"Vectorizing text data (max_features: {max_features}, max_df: {max_df})")
-        print("This may take a while...")
-        vectorizer = TfidfVectorizer(max_features=max_features, max_df=max_df)
-        vector_data = vectorizer.fit_transform(clean_combined_data)
-
-        # Set the precision for pi (decimal places)
-        mp.dps = 50
-        seed = int(str(mp.pi)[2:5])
-        print("Splitting data")
-        print("This may take a while...")
-        X_train, X_test, y_train, y_test = train_test_split(vector_data, combined_labels, test_size=0.2, random_state=seed)
-
-        print("Saving data")
-        save_npz(file=X_train_path, matrix=X_train)
-        save_npz(file=X_test_path, matrix=X_test)
-        np.save(file=y_train_path, arr=y_train)
-        np.save(file=y_test_path, arr=y_test)
-
-        if os.path.exists(model_path) and not ignore_existing:
-            print("Model already exists and ignore_existing is False. Skipping training.")
-
-        print("Training model")
-        print("This may take a very long time (depending on the amount of data)...")
-        clf_svm = SVC(kernel="linear", random_state=seed, probability=True)
-        clf_svm.fit(X_train, y_train)
-
-        print("Saving model")
-        joblib.dump(value=clf_svm, filename=model_path)
-
-
 if __name__ == "__main__":
-    model_path = "svm_model.pkl"
-    X_train_path = "X_train.npz"
-    X_test_path = "X_test.npz"
-    y_train_path = "y_train.npy"
-    y_test_path = "y_test.npy"
+    nltk.download("punkt")
+    nltk.download("stopwords")
 
-    train_pipeline(
-        model_path=model_path,
-        X_train_path=X_train_path,
-        X_test_path=X_test_path,
-        y_train_path=y_train_path,
-        y_test_path=y_test_path,
-        ignore_existing=False,
-    )
+    print("Loading 20 news data")
+    train_data: np.ndarray
+    train_labels: np.ndarray
+    train_data, train_labels = load_20newsdata("./data/20news-bydate-train", max=500)
+    test_data: np.ndarray
+    test_labels: np.ndarray
+    test_data, test_labels = load_20newsdata("./data/20news-bydate-test", max=500)
 
-    clf_svm = joblib.load(filename=model_path)
-    X_train = load_npz(file="X_train.npz")
-    X_test = load_npz(file="X_test.npz")
-    y_train = np.load(file="y_train.npy", allow_pickle=True)
-    y_test = np.load(file="y_test.npy", allow_pickle=True)
+    print("Combining datasets")
+    combined_data: np.ndarray = np.concatenate((train_data, test_data), axis=0)
+    combined_labels: np.ndarray = np.concatenate((train_labels, test_labels), axis=0)
 
-    # Predict and evaluate the model on test data
+    print("Cleaning combined data")
+    clean_combined_data = clean_texts(combined_data)
+
+    # TODO: 10 or more iterations here for cross-validation
+    # Set the precision for pi (decimal places)
+    mp.dps = 50  # TODO: Change this to dynamic value
+    seed = int(str(mp.pi)[2:5])
+
+    print("Splitting data")
+    print("This may take a moment depending on the amount of data...")
+    X_train, X_test, y_train, y_test = train_test_split(clean_combined_data, combined_labels, test_size=0.2, random_state=seed)
+
+    print("Training model")
+    print("This may take a very long time (depending on the amount of data)...")
+    clf_svm = CLF_svm(seed=seed)
+    clf_svm.fit(X_train, y_train)
+
     print("Evaluating model")
     print("This may take a while...")
-    train_pred = clf_svm.predict(X_train)
     test_pred = clf_svm.predict(X_test)
 
     # Print training and test set performance
-    train_accuracy = accuracy_score(y_train, train_pred)
-    print("Training Accuracy:", train_accuracy)
     test_accuracy = accuracy_score(y_test, test_pred)
     print("Test Accuracy:", test_accuracy)
 
