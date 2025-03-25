@@ -74,11 +74,12 @@ def process_model_results(job, model_key: str, articles: list, extractor: Extrac
     Process a single model's results using the provided extractor function.
     Returns a list of results dictionaries.
     """
+    job_id = job.get("_id")
     # Collect all entries matching this model_key from the job document.
     model_results_list = [entry.get(model_key) for entry in job.get("model", []) if model_key in entry]
 
     if not model_results_list:
-        logger.warning(f"No results found for model_key: '{model_key}' in job ID '{job.get("_id")}'")
+        logger.warning(f"({model_key}) No results found for job ID: {job_id}")
         return []
 
     all_results = []
@@ -87,9 +88,9 @@ def process_model_results(job, model_key: str, articles: list, extractor: Extrac
         content = extractor.extract(model_result, model_key)
         try:
             parsed_content = json.loads(strip_markdown_fences(content))
-            logger.info(f"Parsed content for job ID '{job.get("_id")}', model '{model_key}', parsed_content '{parsed_content}'")
+            logger.info(f"({model_key}) Job ID: {job_id}, parsed content: {parsed_content}")
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON content for job ID '{job.get("_id")}', model '{model_key}', error '{e}'")
+            logger.error(f"({model_key}) Job ID: {job_id}, failed to parse JSON: {e}")
             continue
 
         # Iterate over parsed keys; each key is expected to be an index.
@@ -97,7 +98,7 @@ def process_model_results(job, model_key: str, articles: list, extractor: Extrac
             try:
                 index = int(key)
             except ValueError:
-                logger.error(f"Non-integer key encountered in job ID '{job.get("_id")}' for model '{model_key}', key '{key}'")
+                logger.error(f"({model_key}) Job ID: {job_id}, encountered non-integer key: {key}")
                 continue
 
             if index < len(articles):
@@ -110,7 +111,7 @@ def process_model_results(job, model_key: str, articles: list, extractor: Extrac
                     }
                 )
             else:
-                logger.error(f"Index '{index}' out of range for articles in job ID '{job.get("_id")}'")
+                logger.error(f"({model_key}) Job ID: {job_id}, index {index} out of range for articles")
     return all_results
 
 
@@ -124,18 +125,18 @@ async def process_and_store_results_combined(openrouter_models: list, openai_mod
 
     job = find_by_id(col=jobs_col, doc_id=config.job_id)
     if not job:
-        logger.error(f"Job document not found for ID '{config.job_id}'")
+        logger.error(f"(jobs) Job document with ID {config.job_id} not found")
         return
 
     job_id = job.get("_id")
     data_id = job.get("data_id")
     if not data_id:
-        logger.error(f"Data ID not found in job document for job ID '{job_id}'")
+        logger.error(f"(jobs) Job ID: {job_id} is missing the data_id field")
         return
 
     data_doc = find_by_id(col=data_col, doc_id=data_id)
     if not data_doc:
-        logger.error(f"Data document not found for ID '{data_id}'")
+        logger.error(f"(data) Data document with ID {data_id} not found")
         return
 
     articles = data_doc.get("articles", [])
@@ -143,7 +144,7 @@ async def process_and_store_results_combined(openrouter_models: list, openai_mod
 
     # Process OpenRouter models.
     for model_key in openrouter_models:
-        logger.info(f"Currently evaluating OpenRouter model: {model_key}")
+        logger.info(f"({model_key}) Starting evaluation (OpenRouter)")
         results = process_model_results(job, model_key, articles, OpenRouterExtractor())
         if results:
             ragas_avg, ragas_metrics = evaluate_data(results)
@@ -156,7 +157,7 @@ async def process_and_store_results_combined(openrouter_models: list, openai_mod
 
     # Process OpenAI models.
     for model_key in openai_models:
-        logger.info(f"Currently evaluating OpenAI model: {model_key}")
+        logger.info(f"({model_key}) Starting evaluation (OpenAI)")
         results = process_model_results(job, model_key, articles, OpenAIExtractor())
         if results:
             ragas_avg, ragas_metrics = evaluate_data(results)
@@ -170,7 +171,7 @@ async def process_and_store_results_combined(openrouter_models: list, openai_mod
     # Only add a result document to the DB if any models produced results.
     if results_structure["models"]:
         add_result = add_one(col=results_col, data=results_structure)
-        logger.info(f"Added result document with ID '{add_result.inserted_id}' for job ID '{job_id}'")
+        logger.info(f"(DB) Added result document with ID: {add_result.inserted_id} for Job ID: {job_id}")
 
 
 async def main():
