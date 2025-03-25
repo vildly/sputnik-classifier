@@ -60,7 +60,6 @@ def update_by_id(
         # Convert doc_id to an ObjectId if it is provided as a string
         oid = doc_id if isinstance(doc_id, ObjectId) else ObjectId(doc_id)
         result = col.update_one({"_id": oid}, {operator: update_data}, upsert=upsert)
-        logger.debug(update_data)
         logger.info(f"MONGO: Updated: {str(oid)}")
         logger.info(f"MONGO: Matches: {result.matched_count}")
         logger.info(f"MONGO: Modified: {result.modified_count}")

@@ -182,4 +182,4 @@ def sample_data(paths: List[str], out="sample.json", size: Union[int, None] = No
 
 
 if __name__ == "__main__":
-    sample_data(paths=["./data/20news-bydate-test", "./data/20news-bydate-train"], out="./data/sample.json", size=1000)
+    sample_data(paths=["./data/20news-bydate-test", "./data/20news-bydate-train"], out="./data/sample.json", size=50)

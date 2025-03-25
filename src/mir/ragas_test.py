@@ -13,8 +13,10 @@ from pylo import get_logger
 
 load_dotenv()
 logger = get_logger()
-# Environment variables for other things (if needed)
-RAGAS_APP_TOKEN = os.getenv("RAGAS_APP_TOKEN")
+
+# Set secret for Langchain
+os.environ["OPENAI_API_KEY"] = os.getenv("OA_SECRET", "")
+
 
 # Initialize LLM and Embeddings wrappers for evaluation
 evaluator_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o"))
@@ -93,7 +95,9 @@ def evaluate_data(mongo_data):
 
     # Optionally upload the results if needed for your RAGAS setup
     ragas_results.upload()
-    logger.debug(ragas_results)
+    logger.info("RAGAS evaluation complete.")
+    logger.debug(f"RAGAS Results: {ragas_results}")
+
     # Add the RAGAS metrics to the results DataFrame
     for metric_name, scores in ragas_results.to_pandas().items():
         if metric_name != "hash":
@@ -117,12 +121,5 @@ def evaluate_data(mongo_data):
 
     logger.info(f"Test results saved to: {results_csv_path}")
     logger.info(f"Metrics summary saved to: {metrics_csv_path}")
-    logger.debug("\nRAGAS Results:")
-    logger.debug(ragas_results)
 
     return str(ragas_results), ragas_results.to_pandas().to_json(orient="records")
-
-
-if __name__ == "__main__":
-    # This block is for standalone testing of this module.
-    logger.info("ragas_module loaded. Call evaluate_data(mongo_data) from your main module.")
