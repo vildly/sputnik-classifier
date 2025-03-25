@@ -163,4 +163,4 @@ async def main(batch_len: int = 10000):
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(batch_len=10_000))
