@@ -26,7 +26,7 @@ async def openrouter_chat(model: str, prompt: str) -> tuple[str, str]:
         async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:
             response = await client.post(
                 url="https://openrouter.ai/api/v1/chat/completions",
-                headers={"Authorization": f"Bearer {os.getenv('OR_SECRET')}"},
+                headers={"Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}"},
                 json={
                     "model": model,
                     "messages": [{"role": "user", "content": prompt}],
@@ -72,7 +72,7 @@ async def openai_chat(model: str, prompt: str) -> tuple[str, str]:
     logger.info(f"({model}) OA-Prompt: {prompt}")
 
     # Initialize the async client with your OpenAI API key
-    client = AsyncOpenAI(api_key=os.getenv("OA_SECRET"))
+    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     try:
         completion = await client.chat.completions.create(

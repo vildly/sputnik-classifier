@@ -5,7 +5,6 @@ from ragas.metrics import NonLLMStringSimilarity, BleuScore, RougeScore, ExactMa
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-import os
 from dotenv import load_dotenv
 from pathlib import Path
 import datetime
@@ -13,10 +12,6 @@ from pylo import get_logger
 
 load_dotenv()
 logger = get_logger()
-
-# Set secret for Langchain
-os.environ["OPENAI_API_KEY"] = os.getenv("OA_SECRET", "")
-
 
 # Initialize LLM and Embeddings wrappers for evaluation
 evaluator_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o"))
