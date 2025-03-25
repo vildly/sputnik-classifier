@@ -15,7 +15,7 @@ from db import (
     get_collection,
     update_by_id,
 )
-from openrouter import openrouter_chat
+from openrouter import openrouter_chat, openai_chat
 
 
 # Loading the env before getting logger if any variables have been set for it!
@@ -24,24 +24,32 @@ logger = get_logger()
 
 
 class Body:
-    def __init__(self, data_id: str, prompt: str, models: List[str]):
+    def __init__(self, data_id: str, prompt: str, openrouter_models: List[str], openai_models: List[str]):
         self.data_id = data_id
         self.prompt = prompt
-        self.models = models
+        self.openrouter_models = openrouter_models
+        self.openai_models = openai_models
 
 
 body = Body(
-    data_id="67d6c7a60d7931f6342971f0",
+    data_id="67dd621c95dba9ac576eb821",
     prompt="categorize the data into the categories provided",
-    models=["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-pro-exp-02-05:free"],
+    openrouter_models=["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-pro-exp-02-05:free"],
+    openai_models=["gpt-4o"],
 )
 
 
-async def do_task(model, jobs_col, query, job_doc):
+async def do_task(openrouter_models, openai_models, jobs_col, query, job_doc):
     tasks = []
-    for model in body.models:
+    for model in openrouter_models:
+        # 1) New Openrouter call
         task = asyncio.create_task(openrouter_chat(model, query))
         tasks.append(task)
+
+    for model in openai_models:
+        # 2) New OpenAI call
+        task_oa = asyncio.create_task(openai_chat(model, query))
+        tasks.append(task_oa)
 
     # As each task completes, update the job document.
     for completed in asyncio.as_completed(tasks):
@@ -73,7 +81,7 @@ def load_json_data(job_id: str) -> str:
     data_doc = find_by_id(col=col, doc_id=job_id)
 
     for i in range(len(data_doc["model"])):
-        for model in body.models:
+        for model in body.openrouter_models + body.openai_models:
             try:
                 if data_doc["model"][i][model]:
 
@@ -161,7 +169,7 @@ async def main():
 
                 # Create the full query by inserting the current JSON data
                 full_query = base_query.format(input_data=input_data, categories=categories)
-                await do_task(body.models, jobs_col, full_query, job_doc)
+                await do_task(body.openrouter_models, body.openai_models, jobs_col, full_query, job_doc)
                 print(full_query)
                 print("HERE>>>>>>>>>>>>>>> " + str(i))
                 # Reset input_dict for the next batch

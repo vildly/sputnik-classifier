@@ -60,7 +60,7 @@ async def openai_chat(model: str, prompt: str) -> tuple[str, str]:
     logger.info(f"({model}) OA-Prompt: {prompt}")
 
     # Initialize the async client with your OpenAI API key
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_SECRET"))
+    client = AsyncOpenAI(api_key=os.getenv("OA_SECRET"))
 
     try:
         completion = await client.chat.completions.create(
