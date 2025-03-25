@@ -2,6 +2,7 @@ from typing import List
 import os
 import asyncio
 import json
+from time import sleep
 
 from pylo import get_logger
 from dotenv import load_dotenv
@@ -165,6 +166,13 @@ async def main(batch_len: int = 10000):
 
 
 if __name__ == "__main__":
+    sleep_time = 20
+    models = ", ".join(config.openrouter_models + config.openai_models)
+    logger.warning(f"Starting job in {sleep_time} seconds...")
+    logger.warning(f"Using models: {models}.")
+    logger.warning("Are you sure you want to proceed? Otherwise, press Ctrl+C to stop the job.")
+    sleep(sleep_time)
+
     # Run the main function
     # (setting a batch length here based of the model's context length)
     asyncio.run(main(batch_len=10_000))

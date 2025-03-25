@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from time import sleep
 import json
 import re
 import os
@@ -179,4 +180,11 @@ async def main():
 
 
 if __name__ == "__main__":
+    sleep_time = 20
+    models = ", ".join(config.openrouter_models + config.openai_models)
+    logger.warning(f"Starting job in {sleep_time} seconds...")
+    logger.warning(f"Using models: {models}.")
+    logger.warning("Are you sure you want to proceed? Otherwise, press Ctrl+C to stop the job.")
+    sleep(sleep_time)
+
     asyncio.run(main())
