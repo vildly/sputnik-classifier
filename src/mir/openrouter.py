@@ -14,6 +14,12 @@ async def openrouter_chat(model: str, prompt: str) -> tuple[str, str]:
         A tuple (model, result) where 'result' is either the API response (JSON or text)
         or an error message if an exception occurred or if the response status is not 200.
     """
+    if not len(model):
+        return model, "No model specified."
+
+    if not len(prompt):
+        return model, "No prompt specified."
+
     logger.info(f"({model}) OR-Prompt: {prompt}")
 
     try:
@@ -57,6 +63,12 @@ async def openai_chat(model: str, prompt: str) -> tuple[str, str]:
         A tuple (model, result) where 'result' is either the generated text output
         or an error message if an exception occurred.
     """
+    if not len(model):
+        return model, "No model specified."
+
+    if not len(prompt):
+        return model, "No prompt specified."
+
     logger.info(f"({model}) OA-Prompt: {prompt}")
 
     # Initialize the async client with your OpenAI API key
