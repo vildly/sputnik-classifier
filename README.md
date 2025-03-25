@@ -2,14 +2,25 @@
 
 The text classifier
 
-![experiment flow](./.readme/flow.png)
+## Imaginary architecture
+
+> [!NOTE]
+> The architecture is imaginary and does not represent the actual architecture of the system.
+
+![Imaginary architecture](./.readme/architecture.png)
+
+## Experiment flow
+
+![Experiment flow](./.readme/flow.png)
 
 ## Ragas metrics
 
-![ragas metrics](./.readme/ragas.png)
+![Ragas metrics](./.readme/ragas.png)
 
 ## Bar
+
 ![Bar](./.readme/bar.png)
 
-## Viol 
+## Viol
+
 ![Viol](./.readme/viol.png)
