@@ -6,10 +6,8 @@ import asyncio
 
 from pylo import get_logger
 from dotenv import load_dotenv
-from ragas_test import evaluate_data
 import json
 
-from clean import process_json_data
 from db import (
     add_one,
     connect_to_database,
@@ -17,7 +15,7 @@ from db import (
     get_collection,
     update_by_id,
 )
-from openrouter import chat
+from openrouter import openrouter_chat
 
 
 # Loading the env before getting logger if any variables have been set for it!
@@ -33,18 +31,16 @@ class Body:
 
 
 body = Body(
-    # data_id="67cad4bf1aa383247994482c",
-    # data_id="67d1b80b2d50436191e7ee35",
-    data_id = "67d6c7a60d7931f6342971f0",
+    data_id="67d6c7a60d7931f6342971f0",
     prompt="categorize the data into the categories provided",
-    models=["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-pro-exp-02-05:free" ],
+    models=["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-pro-exp-02-05:free"],
 )
 
 
 async def do_task(model, jobs_col, query, job_doc):
     tasks = []
     for model in body.models:
-        task = asyncio.create_task(chat(model, query))
+        task = asyncio.create_task(openrouter_chat(model, query))
         tasks.append(task)
 
     # As each task completes, update the job document.
@@ -61,36 +57,35 @@ async def do_task(model, jobs_col, query, job_doc):
         # Optionally log the result to debug
         logger.info(f"Update result: {result.modified_count if result else 'No result logged'}")
 
+
 def strip_markdown_fences(text):
 
     text = text.strip()
-    text = re.sub(r'^```json\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
+    text = re.sub(r"^```json\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
     return text
 
+
 def load_json_data(job_id: str) -> str:
- 
 
     string = ""
     col = get_collection(db="jobs", collection="v1")
-    data_doc = find_by_id(col=col, doc_id=job_id)   
+    data_doc = find_by_id(col=col, doc_id=job_id)
 
     for i in range(len(data_doc["model"])):
-        for model in body.models: 
+        for model in body.models:
             try:
-                if(data_doc["model"][i][model]):
-                    
-                    string += strip_markdown_fences(
-                            data_doc["model"][i][model]["choices"][0]["message"]["content"] 
-                    ) + ",\n"
-            
+                if data_doc["model"][i][model]:
+
+                    string += strip_markdown_fences(data_doc["model"][i][model]["choices"][0]["message"]["content"]) + ",\n"
+
             except KeyError:
-                pass # Just catch key error
+                pass  # Just catch key error
 
     print(string)
 
-
     return ""
+
 
 async def main():
     MAX_DATA_LENGTH = 100000
@@ -99,11 +94,8 @@ async def main():
 
     connect_to_database(connection_string=os.getenv("MONGODB_URI"))
 
-    # load_json_data(job_id="67d9a532eb06d49efba0558f")
-    # exit()
- 
     data_col = get_collection(db="data", collection="v1")
-    data_doc = find_by_id(col=data_col, doc_id=body.data_id)   
+    data_doc = find_by_id(col=data_col, doc_id=body.data_id)
     articles_length = len(data_doc["articles"])
 
     categories = ", ".join(data_doc["categories"])
@@ -155,8 +147,8 @@ async def main():
 
     while cnt_len < articles_length:
         for i in range(articles_length):
-            
-            current_article_text = data_doc["articles"][i]['user_input']
+
+            current_article_text = data_doc["articles"][i]["user_input"]
             data_length += len(current_article_text)
             cnt_len += 1
 
@@ -168,10 +160,10 @@ async def main():
                 input_data = json.dumps(input_dict, ensure_ascii=False)
 
                 # Create the full query by inserting the current JSON data
-                full_query = base_query.format(input_data=input_data, categories=categories)  
+                full_query = base_query.format(input_data=input_data, categories=categories)
                 await do_task(body.models, jobs_col, full_query, job_doc)
                 print(full_query)
-                print("HERE>>>>>>>>>>>>>>> " + str (i))
+                print("HERE>>>>>>>>>>>>>>> " + str(i))
                 # Reset input_dict for the next batch
                 input_dict = {}
 
@@ -183,7 +175,8 @@ async def main():
     if input_dict:
         input_data = json.dumps(input_dict, ensure_ascii=False)
         full_query = base_query.format(input_data=input_data, categories=categories)
-        #print(full_query)
+        # print(full_query)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
