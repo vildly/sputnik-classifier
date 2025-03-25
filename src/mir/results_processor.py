@@ -27,7 +27,7 @@ class Config:
 
 config = Config(
     job_id="67e2ffcb1f64f880441adec4",
-    openrouter_models=["google/gemini-2.0-flash-001"],
+    openrouter_models=["google/gemini-2.0-flash-001", "mistralai/ministral-8b"],
     openai_models=["gpt-4o"],
 )
 
