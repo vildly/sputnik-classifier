@@ -1,6 +1,5 @@
 # main.py
 from typing import List
-import re
 import os
 import asyncio
 
@@ -34,7 +33,7 @@ class Body:
 body = Body(
     data_id="67dd621c95dba9ac576eb821",
     prompt="categorize the data into the categories provided",
-    openrouter_models=["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-pro-exp-02-05:free"],
+    openrouter_models=["google/gemini-2.0-flash-001", "mistralai/ministral-8b"],
     openai_models=["gpt-4o"],
 )
 
@@ -64,35 +63,6 @@ async def do_task(openrouter_models, openai_models, jobs_col, query, job_doc):
         )
         # Optionally log the result to debug
         logger.info(f"Update result: {result.modified_count if result else 'No result logged'}")
-
-
-def strip_markdown_fences(text):
-
-    text = text.strip()
-    text = re.sub(r"^```json\s*", "", text)
-    text = re.sub(r"\s*```$", "", text)
-    return text
-
-
-def load_json_data(job_id: str) -> str:
-
-    string = ""
-    col = get_collection(db="jobs", collection="v1")
-    data_doc = find_by_id(col=col, doc_id=job_id)
-
-    for i in range(len(data_doc["model"])):
-        for model in body.openrouter_models + body.openai_models:
-            try:
-                if data_doc["model"][i][model]:
-
-                    string += strip_markdown_fences(data_doc["model"][i][model]["choices"][0]["message"]["content"]) + ",\n"
-
-            except KeyError:
-                pass  # Just catch key error
-
-    print(string)
-
-    return ""
 
 
 async def main():

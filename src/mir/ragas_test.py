@@ -1,6 +1,4 @@
-
 import pandas as pd
-import json
 from ragas import evaluate, EvaluationDataset
 from ragas.metrics import FactualCorrectness, SemanticSimilarity
 from ragas.metrics import NonLLMStringSimilarity, BleuScore, RougeScore, ExactMatch, StringPresence
@@ -14,28 +12,29 @@ import datetime
 
 load_dotenv()
 # Environment variables for other things (if needed)
-RAGAS_APP_TOKEN = os.getenv('RAGAS_APP_TOKEN')
+RAGAS_APP_TOKEN = os.getenv("RAGAS_APP_TOKEN")
 
 # Initialize LLM and Embeddings wrappers for evaluation
 evaluator_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o"))
 evaluator_embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings())
 
+
 def evaluate_data(mongo_data):
     """
     Evaluate test cases using the responses from OpenRouter.
-    
+
     Each document in mongo_data is expected to have an "items" key which
     is a list of dictionaries structured as follows:
-    
+
         {
           "feature": "work-order description",
           "target": "ground truth category",
           "response": "the answer from OpenRouter"
         }
-    
+
     Args:
         mongo_data (list): List of documents (dictionaries) from MongoDB.
-    
+
     Returns:
         pd.DataFrame: DataFrame containing the original data and evaluation metrics.
     """
@@ -43,60 +42,61 @@ def evaluate_data(mongo_data):
     results = []
     for document in mongo_data:
         # Extract the list of test cases; adjust key names as needed.
-    
-        query = document.get('user_input')
-        ground_truth = document.get('reference')
-        response = document.get('agent_response')
-        
+
+        query = document.get("user_input")
+        ground_truth = document.get("reference")
+        response = document.get("agent_response")
+
         if query is None:
             print("Warning: Test case missing 'feature' key. Skipping entry.")
             continue
-        
-        results.append({
-            "user_input": query,      # The work-order description
-            "reference": ground_truth,  # Ground truth category
-            "agent_response": response  # Response from OpenRouter
-        })
-     
+
+        results.append(
+            {
+                "user_input": query,  # The work-order description
+                "reference": ground_truth,  # Ground truth category
+                "agent_response": response,  # Response from OpenRouter
+            }
+        )
 
     results_df = pd.DataFrame(results)
-    
+
     # Prepare DataFrame for RAGAS Evaluation:
     # RAGAS expects columns for the question, reference, and response.
     ragas_data = results_df.copy()
     ragas_data = ragas_data.rename(columns={"user_input": "question"})
     ragas_data["response"] = results_df["agent_response"]
-    
+
     # Ensure that 'reference' exists
-    if 'reference' not in ragas_data.columns:
+    if "reference" not in ragas_data.columns:
         print("Warning: 'reference' column not found. Adding a placeholder.")
-        ragas_data['reference'] = None
+        ragas_data["reference"] = None
 
     # Create the evaluation dataset from the DataFrame
     eval_dataset = EvaluationDataset.from_pandas(ragas_data)
-    
+
     # Define the evaluation metrics
     metrics = [
-        FactualCorrectness(llm=evaluator_llm), 
+        FactualCorrectness(llm=evaluator_llm),
         SemanticSimilarity(embeddings=evaluator_embeddings),
         NonLLMStringSimilarity(),
         BleuScore(),
         RougeScore(rouge_type="rouge1"),  # Example for unigrams
         ExactMatch(),
-        StringPresence()
+        StringPresence(),
     ]
-    
+
     # Perform the evaluation using RAGAS
     ragas_results = evaluate(eval_dataset, metrics, llm=evaluator_llm)
-    
+
     # Optionally upload the results if needed for your RAGAS setup
     ragas_results.upload()
     print(ragas_results)
     # Add the RAGAS metrics to the results DataFrame
     for metric_name, scores in ragas_results.to_pandas().items():
-        if metric_name != 'hash':
+        if metric_name != "hash":
             results_df[metric_name] = scores
-    
+
     # Optionally, save results in a timestamped output directory
     cwd = Path(__file__).parent.resolve()
     output_dir = cwd.joinpath("output")
@@ -117,8 +117,9 @@ def evaluate_data(mongo_data):
     print(f"Metrics summary saved to: {metrics_csv_path}")
     print("\nRAGAS Results:")
     print(ragas_results)
-    
-    return str(ragas_results), ragas_results.to_pandas().to_json(orient='records')
+
+    return str(ragas_results), ragas_results.to_pandas().to_json(orient="records")
+
 
 if __name__ == "__main__":
     # This block is for standalone testing of this module.
