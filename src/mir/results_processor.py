@@ -26,7 +26,7 @@ class Config:
 
 
 config = Config(
-    job_id="67e2df276227369f9142299e",
+    job_id="67e2ffcb1f64f880441adec4",
     openrouter_models=["google/gemini-2.0-flash-001"],
     openai_models=["gpt-4o"],
 )
@@ -69,14 +69,14 @@ class OpenAIExtractor(ExtractorInterface):
         return model_result if isinstance(model_result, str) else model_result.get(model_key, "")
 
 
-def process_model_results(job, model_key: str, articles: list, extractor: ExtractorInterface) -> list:
+def process_model_results(job_doc, model_key: str, articles: list, extractor: ExtractorInterface) -> list:
     """
     Process a single model's results using the provided extractor function.
     Returns a list of results dictionaries.
     """
-    job_id = job.get("_id")
+    job_id = job_doc.get("_id")
     # Collect all entries matching this model_key from the job document.
-    model_results_list = [entry.get(model_key) for entry in job.get("model", []) if model_key in entry]
+    model_results_list = [entry.get(model_key) for entry in job_doc.get("model", []) if model_key in entry]
 
     if not model_results_list:
         logger.warning(f"({model_key}) No results found for job ID: {job_id}")
@@ -93,6 +93,7 @@ def process_model_results(job, model_key: str, articles: list, extractor: Extrac
             logger.error(f"({model_key}) Job ID: {job_id}, failed to parse JSON: {e}")
             continue
 
+        # NOTE:
         # Iterate over parsed keys; each key is expected to be an index.
         for key, category in parsed_content.items():
             try:
@@ -101,17 +102,20 @@ def process_model_results(job, model_key: str, articles: list, extractor: Extrac
                 logger.error(f"({model_key}) Job ID: {job_id}, encountered non-integer key: {key}")
                 continue
 
-            if index < len(articles):
-                article = articles[index]
-                all_results.append(
-                    {
-                        "user_input": article["user_input"],
-                        "reference": article["reference"],
-                        "agent_response": category,
-                    }
-                )
-            else:
-                logger.error(f"({model_key}) Job ID: {job_id}, index {index} out of range for articles")
+            if index >= len(articles):
+                logger.warning(f"({model_key}) Job ID: {job_id}, index {index} out of range for articles, skipping")
+                logger.warning("The model may have returned too many results or hallucinated")
+                continue
+
+            article = articles[index]
+            all_results.append(
+                {
+                    "user_input": article["user_input"],
+                    "reference": article["reference"],
+                    "agent_response": category,
+                }
+            )
+
     return all_results
 
 
@@ -123,21 +127,16 @@ async def process_and_store_results_combined(openrouter_models: list, openai_mod
     results_col = get_collection(db="results", collection="v1")
     data_col = get_collection(db="data", collection="v1")
 
-    job = find_by_id(col=jobs_col, doc_id=config.job_id)
-    if not job:
-        logger.error(f"(jobs) Job document with ID {config.job_id} not found")
-        return
+    # No need to check if the job exists as the method will raise an error if it doesn't.
+    job_doc = find_by_id(col=jobs_col, doc_id=config.job_id)
 
-    job_id = job.get("_id")
-    data_id = job.get("data_id")
+    job_id = job_doc.get("_id")
+    data_id = job_doc.get("data_id")
     if not data_id:
-        logger.error(f"(jobs) Job ID: {job_id} is missing the data_id field")
+        logger.error(f"Job ID: {job_id} is missing the data_id field")
         return
 
     data_doc = find_by_id(col=data_col, doc_id=data_id)
-    if not data_doc:
-        logger.error(f"(data) Data document with ID {data_id} not found")
-        return
 
     articles = data_doc.get("articles", [])
     results_structure = {"models": {}}
@@ -145,7 +144,7 @@ async def process_and_store_results_combined(openrouter_models: list, openai_mod
     # Process OpenRouter models.
     for model_key in openrouter_models:
         logger.info(f"({model_key}) Starting evaluation (OpenRouter)")
-        results = process_model_results(job, model_key, articles, OpenRouterExtractor())
+        results = process_model_results(job_doc, model_key, articles, OpenRouterExtractor())
         if results:
             ragas_avg, ragas_metrics = evaluate_data(results)
             results_structure["models"][model_key] = {
@@ -158,7 +157,7 @@ async def process_and_store_results_combined(openrouter_models: list, openai_mod
     # Process OpenAI models.
     for model_key in openai_models:
         logger.info(f"({model_key}) Starting evaluation (OpenAI)")
-        results = process_model_results(job, model_key, articles, OpenAIExtractor())
+        results = process_model_results(job_doc, model_key, articles, OpenAIExtractor())
         if results:
             ragas_avg, ragas_metrics = evaluate_data(results)
             results_structure["models"][model_key] = {

@@ -29,22 +29,21 @@ class Config:
 
 
 config = Config(
-    data_id="67e2d15667e690e63ad74a5c",
+    data_id="67dd621c95dba9ac576eb821",
     prompt="categorize the data into the categories provided",
-    openrouter_models=["google/gemini-2.0-flash-001"],
+    openrouter_models=["google/gemini-2.0-flash-001", "mistralai/ministral-8b"],
     openai_models=["gpt-4o"],
 )
 
 
 async def do_task(openrouter_models, openai_models, jobs_col, query, job_doc):
     tasks = []
-    # Log the starting messages for all Openrouter models with the model name inside parentheses.
+    # Start the chat tasks for each model.
     for model in openrouter_models:
         logger.info(f"({model}) Starting...")
         task = asyncio.create_task(openrouter_chat(model, query))
         tasks.append(task)
 
-    # Log the starting messages for all OpenAI models.
     for model in openai_models:
         logger.info(f"({model}) Starting...")
         task_oa = asyncio.create_task(openai_chat(model, query))
@@ -77,15 +76,14 @@ async def main(batch_len: int = 10000):
     :param batch_len: The maximum length of the batch.
     :return: None
     """
-    cnt_len = 0
-    data_len = 0
-
     connect_to_database(connection_string=os.getenv("MONGODB_URI"))
 
+    # Get the data document and its length
     data_col = get_collection(db="data", collection="v1")
     data_doc = find_by_id(col=data_col, doc_id=config.data_id)
     articles_length = len(data_doc["articles"])
 
+    # Get the categories from the data document
     categories = ", ".join(data_doc["categories"])
 
     # Static base query with a placeholder for input_data and categories
@@ -136,12 +134,16 @@ async def main(batch_len: int = 10000):
         logger.error("(job) Job document not created")
         return
 
+    # Process the data in batches
+    cnt_len = 0
+    data_len = 0
     while cnt_len < articles_length:
         for i in range(articles_length):
             current_article_text = data_doc["articles"][i]["user_input"]
             data_len += len(current_article_text)
             cnt_len += 1
 
+            # Check if the batch length is reached
             if data_len > batch_len:
                 logger.info(f"(batch) Max length reached at index {i}")
                 data_len = 0
@@ -163,4 +165,6 @@ async def main(batch_len: int = 10000):
 
 
 if __name__ == "__main__":
+    # Run the main function
+    # (setting a batch length here based of the model's context length)
     asyncio.run(main(batch_len=10_000))
