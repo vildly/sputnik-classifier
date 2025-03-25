@@ -9,8 +9,10 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 import datetime
+from pylo import get_logger
 
 load_dotenv()
+logger = get_logger()
 # Environment variables for other things (if needed)
 RAGAS_APP_TOKEN = os.getenv("RAGAS_APP_TOKEN")
 
@@ -48,7 +50,7 @@ def evaluate_data(mongo_data):
         response = document.get("agent_response")
 
         if query is None:
-            print("Warning: Test case missing 'feature' key. Skipping entry.")
+            logger.warning("Test case missing 'feature' key. Skipping entry.")
             continue
 
         results.append(
@@ -69,7 +71,7 @@ def evaluate_data(mongo_data):
 
     # Ensure that 'reference' exists
     if "reference" not in ragas_data.columns:
-        print("Warning: 'reference' column not found. Adding a placeholder.")
+        logger.warning("'reference' column not found. Adding a placeholder.")
         ragas_data["reference"] = None
 
     # Create the evaluation dataset from the DataFrame
@@ -91,7 +93,7 @@ def evaluate_data(mongo_data):
 
     # Optionally upload the results if needed for your RAGAS setup
     ragas_results.upload()
-    print(ragas_results)
+    logger.debug(ragas_results)
     # Add the RAGAS metrics to the results DataFrame
     for metric_name, scores in ragas_results.to_pandas().items():
         if metric_name != "hash":
@@ -113,14 +115,14 @@ def evaluate_data(mongo_data):
     metrics_df = ragas_results.to_pandas()
     metrics_df.to_csv(metrics_csv_path, index=False)
 
-    print(f"Test results saved to: {results_csv_path}")
-    print(f"Metrics summary saved to: {metrics_csv_path}")
-    print("\nRAGAS Results:")
-    print(ragas_results)
+    logger.info(f"Test results saved to: {results_csv_path}")
+    logger.info(f"Metrics summary saved to: {metrics_csv_path}")
+    logger.debug("\nRAGAS Results:")
+    logger.debug(ragas_results)
 
     return str(ragas_results), ragas_results.to_pandas().to_json(orient="records")
 
 
 if __name__ == "__main__":
     # This block is for standalone testing of this module.
-    print("ragas_module loaded. Call evaluate_data(mongo_data) from your main module.")
+    logger.info("ragas_module loaded. Call evaluate_data(mongo_data) from your main module.")

@@ -35,9 +35,7 @@ def connect_to_database(connection_string: str | None) -> None:
 
 def get_collection(db: str, collection: str) -> Collection:
     if CLIENT is None:
-        raise Exception(
-            "Database client is not connected. Call connect_to_database first."
-        )
+        raise Exception("Database client is not connected. Call connect_to_database first.")
     database = CLIENT.get_database(name=db)
     return database.get_collection(name=collection)
 
@@ -62,7 +60,7 @@ def update_by_id(
         # Convert doc_id to an ObjectId if it is provided as a string
         oid = doc_id if isinstance(doc_id, ObjectId) else ObjectId(doc_id)
         result = col.update_one({"_id": oid}, {operator: update_data}, upsert=upsert)
-        print(update_data)
+        logger.debug(update_data)
         logger.info(f"MONGO: Updated: {str(oid)}")
         logger.info(f"MONGO: Matches: {result.matched_count}")
         logger.info(f"MONGO: Modified: {result.modified_count}")

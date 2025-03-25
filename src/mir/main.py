@@ -1,11 +1,10 @@
-# main.py
 from typing import List
 import os
 import asyncio
+import json
 
 from pylo import get_logger
 from dotenv import load_dotenv
-import json
 
 from db import (
     add_one,
@@ -16,8 +15,7 @@ from db import (
 )
 from openrouter import openrouter_chat, openai_chat
 
-
-# Loading the env before getting logger if any variables have been set for it!
+# Load environment variables before getting the logger
 load_dotenv()
 logger = get_logger()
 
@@ -33,7 +31,7 @@ class Body:
 body = Body(
     data_id="67dd621c95dba9ac576eb821",
     prompt="categorize the data into the categories provided",
-    openrouter_models=["google/gemini-2.0-flash-001", "mistralai/ministral-8b"],
+    openrouter_models=[""],
     openai_models=["gpt-4o"],
 )
 
@@ -53,8 +51,8 @@ async def do_task(openrouter_models, openai_models, jobs_col, query, job_doc):
     # As each task completes, update the job document.
     for completed in asyncio.as_completed(tasks):
         model, res = await completed
-        print(f"Got answer: {res}; ")
-        logger.info(f"Completed: {model}; adding to the job document")
+        logger.info("Got answer for model %s: %s", model, res)
+        logger.info("Completed: %s; adding to the job document", model)
         result = update_by_id(
             col=jobs_col,
             doc_id=job_doc.inserted_id,
@@ -62,7 +60,7 @@ async def do_task(openrouter_models, openai_models, jobs_col, query, job_doc):
             operator="$push",
         )
         # Optionally log the result to debug
-        logger.info(f"Update result: {result.modified_count if result else 'No result logged'}")
+        logger.info("Update result: %s", result.modified_count if result else "No result logged")
 
 
 async def main():
@@ -131,29 +129,29 @@ async def main():
             cnt_len += 1
 
             if data_length > MAX_DATA_LENGTH:
-                print(f"Max length reached on index {i}")
+                logger.info("Max length reached on index %s", i)
                 data_length = 0
 
-                # Convert the dictionary to a JSON string
+                # Convert the dictionary to a JSON string.
                 input_data = json.dumps(input_dict, ensure_ascii=False)
 
-                # Create the full query by inserting the current JSON data
+                # Create the full query by inserting the current JSON data.
                 full_query = base_query.format(input_data=input_data, categories=categories)
                 await do_task(body.openrouter_models, body.openai_models, jobs_col, full_query, job_doc)
-                print(full_query)
-                print("HERE>>>>>>>>>>>>>>> " + str(i))
-                # Reset input_dict for the next batch
+                logger.info("Full query: %s", full_query)
+                logger.info("HERE>>>>>>>>>>>>>>> %s", i)
+                # Reset input_dict for the next batch.
                 input_dict = {}
 
             else:
-                # Populate the dictionary
+                # Populate the dictionary.
                 input_dict[str(i)] = current_article_text
 
-    # Process any remaining data at the end
+    # Process any remaining data at the end.
     if input_dict:
         input_data = json.dumps(input_dict, ensure_ascii=False)
         full_query = base_query.format(input_data=input_data, categories=categories)
-        # print(full_query)
+        logger.info("Processing remaining data with query: %s", full_query)
 
 
 if __name__ == "__main__":
