@@ -125,9 +125,9 @@ async def main():
 
     # Specify the model keys you want to process
     model_keys = [
-        "google/gemini-2.0-flash-001",
+        # "google/gemini-2.0-flash-001",
         # "gpt-4o",
-        # "mistralai/ministral-8b"
+        "mistralai/ministral-8b"
     ]
     print(f"Starting processing for models: {model_keys}")
     await process_and_store_results(model_keys)
