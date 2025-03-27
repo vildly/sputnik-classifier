@@ -158,7 +158,7 @@ if __name__ == "__main__":
     connect_to_database(connection_string=os.getenv("MONGODB_URI"))
     res_col = get_collection(db="results", collection="v1")
     records = report_df.set_index("Label").to_dict("index")
-    add_one(col=res_col, data={"models": {"svm": records}})
+    add_one(col=res_col, data={"models": {"svm": {"model_id": "svm", "classification_report": records}}})
 
     # Combine all confusion matrices
     plt.figure(figsize=(10, 8))
