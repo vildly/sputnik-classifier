@@ -68,10 +68,10 @@ if __name__ == "__main__":
     print("Loading 20 news data")
     train_data: np.ndarray
     train_labels: np.ndarray
-    train_data, train_labels = load_20newsdata(paths=["./data/20news-bydate-train"])
+    train_data, train_labels = load_20newsdata(paths=["/Users/anniad/Desktop/data/20news-bydate-train"])
     test_data: np.ndarray
     test_labels: np.ndarray
-    test_data, test_labels = load_20newsdata(paths=["./data/20news-bydate-test"])
+    test_data, test_labels = load_20newsdata(paths=["/Users/anniad/Desktop/data/20news-bydate-test"])
 
     print("Combining datasets")
     combined_data: np.ndarray = np.concatenate((train_data, test_data), axis=0)
@@ -143,10 +143,10 @@ if __name__ == "__main__":
     report_df = pd.DataFrame(
         {
             "Label": used_labels_as_str,
-            "Precision": aggregated_precision,
-            "Recall": aggregated_recall,
-            "F1 Score": aggregated_f1,
-            "Support": aggregated_support,
+            "precision": aggregated_precision,
+            "recall": aggregated_recall,
+            "f1-score": aggregated_f1,
+            "support": aggregated_support,
         }
     )
     print("\nAggregated Classification Report")
