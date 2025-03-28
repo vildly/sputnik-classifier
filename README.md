@@ -24,3 +24,9 @@ The text classifier
 ## Viol
 
 ![Viol](./.readme/viol.png)
+
+## Machine learning
+
+### SVM
+
+![Confusion matrix svm](./.readme/confusion_matrix_svm.png)

@@ -85,7 +85,7 @@ if __name__ == "__main__":
     sampled_data: np.ndarray
     sampled_labels: np.ndarray
     # Setting size to None ensures that the entire dataset is sampled
-    sampled_data, sampled_labels = sample_data(data=combined_data, labels=combined_labels, size=1000)
+    sampled_data, sampled_labels = sample_data(data=combined_data, labels=combined_labels, size=None)
 
     print("Cleaning combined data")
     cleaned_sampled_data = clean_texts(texts=sampled_data, lang="english")
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     aggregated_support = np.sum(supports, axis=0)
     report_df = pd.DataFrame(
         {
-            "label": used_labels_as_str,
+            "Label": used_labels_as_str,
             "precision": aggregated_precision,
             "recall": aggregated_recall,
             "f1-score": aggregated_f1,
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     }
     macro_avg_df = pd.DataFrame(
         {
-            "label": ["Macro Avg"],
+            "Label": ["Macro Avg"],
             "precision": [macro_avg["precision"]],
             "recall": [macro_avg["recall"]],
             "f1-score": [macro_avg["f1-score"]],
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     }
     weighted_avg_df = pd.DataFrame(
         {
-            "label": ["Weighted Avg"],
+            "Label": ["Weighted Avg"],
             "precision": [weighted_avg["precision"]],
             "recall": [weighted_avg["recall"]],
             "f1-score": [weighted_avg["f1-score"]],
