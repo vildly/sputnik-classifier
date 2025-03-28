@@ -62,16 +62,20 @@ class CLF_svm:
 
 
 if __name__ == "__main__":
+    load_dotenv()
+    connect_to_database(connection_string=os.getenv("MONGODB_URI"))
+
     nltk.download(info_or_id="punkt", quiet=True)
+    nltk.download(info_or_id="punkt_tab", quiet=True)
     nltk.download(info_or_id="stopwords", quiet=True)
 
     print("Loading 20 news data")
     train_data: np.ndarray
     train_labels: np.ndarray
-    train_data, train_labels = load_20newsdata(paths=["/Users/anniad/Desktop/data/20news-bydate-train"])
+    train_data, train_labels = load_20newsdata(paths=["./data/20news-bydate-train"])
     test_data: np.ndarray
     test_labels: np.ndarray
-    test_data, test_labels = load_20newsdata(paths=["/Users/anniad/Desktop/data/20news-bydate-test"])
+    test_data, test_labels = load_20newsdata(paths=["./data/20news-bydate-test"])
 
     print("Combining datasets")
     combined_data: np.ndarray = np.concatenate((train_data, test_data), axis=0)
@@ -81,7 +85,7 @@ if __name__ == "__main__":
     sampled_data: np.ndarray
     sampled_labels: np.ndarray
     # Setting size to None ensures that the entire dataset is sampled
-    sampled_data, sampled_labels = sample_data(data=combined_data, labels=combined_labels, size=None)
+    sampled_data, sampled_labels = sample_data(data=combined_data, labels=combined_labels, size=1000)
 
     print("Cleaning combined data")
     cleaned_sampled_data = clean_texts(texts=sampled_data, lang="english")
@@ -134,7 +138,6 @@ if __name__ == "__main__":
 
     # Final evaluation
     # Aggregated classification report
-
     used_labels_as_str = [str(label) for label in used_labels]
     aggregated_precision = np.mean(precisions, axis=0)
     aggregated_recall = np.mean(recalls, axis=0)
@@ -142,7 +145,7 @@ if __name__ == "__main__":
     aggregated_support = np.sum(supports, axis=0)
     report_df = pd.DataFrame(
         {
-            "Label": used_labels_as_str,
+            "label": used_labels_as_str,
             "precision": aggregated_precision,
             "recall": aggregated_recall,
             "f1-score": aggregated_f1,
@@ -152,12 +155,61 @@ if __name__ == "__main__":
     print("\nAggregated Classification Report")
     print(report_df)
 
+    # Compute average accuracy across folds
+    average_accuracy = np.mean(accuracies)
+    print("\nAccuracy")
+    print(average_accuracy)
+
+    # Set score types and the total support of aggregate
+    score_types = ["Precision", "Recall", "F1", "Support"]
+    total_support = np.sum(aggregated_support)
+    # Compute macro averages
+    macro_avg = {
+        "precision": np.mean(aggregated_precision),
+        "recall": np.mean(aggregated_recall),
+        "f1-score": np.mean(aggregated_f1),
+        "support": total_support,
+    }
+    macro_avg_df = pd.DataFrame(
+        {
+            "label": ["Macro Avg"],
+            "precision": [macro_avg["precision"]],
+            "recall": [macro_avg["recall"]],
+            "f1-score": [macro_avg["f1-score"]],
+            "support": [macro_avg["support"]],
+        }
+    )
+    print("\nMacro Averages")
+    print(macro_avg_df)
+
+    # Compute weighted averages
+    weighted_avg = {
+        "precision": np.sum(aggregated_precision * aggregated_support) / total_support,
+        "recall": np.sum(aggregated_recall * aggregated_support) / total_support,
+        "f1-score": np.sum(aggregated_f1 * aggregated_support) / total_support,
+        "support": total_support,
+    }
+    weighted_avg_df = pd.DataFrame(
+        {
+            "label": ["Weighted Avg"],
+            "precision": [weighted_avg["precision"]],
+            "recall": [weighted_avg["recall"]],
+            "f1-score": [weighted_avg["f1-score"]],
+            "support": [weighted_avg["support"]],
+        }
+    )
+    print("\nWeighted Averages")
+    print(weighted_avg_df)
+
+    # Make the dataframes ready for the database
+    records = report_df.set_index("Label").to_dict("index")
+    records["accuracy"] = average_accuracy
+    records["macro_avg"] = macro_avg
+    records["weighted_avg"] = weighted_avg
+
     # Add results to database
     print("\nAdding results to database")
-    load_dotenv()
-    connect_to_database(connection_string=os.getenv("MONGODB_URI"))
     res_col = get_collection(db="results", collection="v1")
-    records = report_df.set_index("Label").to_dict("index")
     add_one(col=res_col, data={"models": {"svm": {"model_id": "svm", "classification_report": records}}})
 
     # Combine all confusion matrices

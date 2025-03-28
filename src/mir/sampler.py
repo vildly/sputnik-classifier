@@ -65,6 +65,9 @@ def load_20newsdata(paths: List[str]) -> Tuple[np.ndarray, np.ndarray]:
     file_paths = file_paths[:file_count]
     file_labels = file_labels[:file_count]
 
+    if file_count == 0:
+        raise ValueError("No files found in the provided paths.")
+
     ########################################################################
     # Read file contents in parallel.
     ########################################################################
