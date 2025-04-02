@@ -213,10 +213,31 @@ if __name__ == "__main__":
     add_one(col=res_col, data={"models": {"svm": {"model_id": "svm", "classification_report": records}}})
 
     # Combine all confusion matrices
-    plt.figure(figsize=(10, 8))
     combined_conf_matrix = np.sum(np.array(conf_matrices), axis=0)
-    sns.heatmap(combined_conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=used_labels_as_str, yticklabels=used_labels_as_str)
-    plt.title(f"Combined Confusion Matrix Across {k} Folds")
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
+
+    # Plot confusion matrix
+    plt.figure(figsize=(13, 11))
+    sns.heatmap(
+        combined_conf_matrix,
+        annot=True,  # Show numbers in cells
+        annot_kws={"size": 7},  # Apply annotation keywords if defined above
+        fmt="d",  # Format numbers as integers
+        cmap="Blues",  # Color scheme
+        xticklabels=used_labels_as_str,  # Use the full string labels
+        yticklabels=used_labels_as_str,
+        linewidths=0.5,  # Optional: Add thin lines between cells
+        linecolor="lightgray",  # Optional: Color for cell lines
+        cbar_kws={"shrink": 0.75},  # Optional: Shrink color bar
+    )
+    plt.title(f"Combined Confusion Matrix Across {k} Folds", fontsize=14)
+    plt.xlabel("Predicted Label", fontsize=10)
+    plt.ylabel("True Label", fontsize=10)
+
+    # Rotate X labels vertically, align text properly
+    plt.xticks(rotation=90, ha="center", fontsize=9)
+    # Keep Y labels horizontal, ensure vertical alignment is centered
+    plt.yticks(rotation=0, va="center", fontsize=9)
+
+    plt.tight_layout()
+
     plt.show()

@@ -8,6 +8,10 @@ from tqdm import tqdm
 import nltk
 from string import punctuation
 from typing import Dict, List, Set, Generator, Tuple, Union
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+import pandas as pd
 
 
 def clean_texts(texts: np.ndarray, lang: str = "english") -> np.ndarray:
@@ -171,6 +175,67 @@ def sample_data(
     for label, count in zip(unique_sampled_labels, counts_sampled):
         print(f"\t{label}: {count}")
     print()
+
+    # ########################################################################
+    # # Plotting with Seaborn                                                #
+    # ########################################################################
+
+    # 1. Prepare data for plotting
+    # Extract the top-level category (e.g., 'rec' from 'rec.autos')
+    top_level_categories = [label.split(".")[0] for label in unique_sampled_labels]
+
+    # Create a Pandas DataFrame (often helps with Seaborn)
+    df_plot = pd.DataFrame({"Category": unique_sampled_labels, "Count": counts_sampled, "Group": top_level_categories})
+
+    # Optional: Sort DataFrame by Group then Category for potentially better visual grouping
+    df_plot = df_plot.sort_values(by=["Group", "Category"])
+
+    # 2. Determine unique groups and assign colors
+    unique_groups = sorted(df_plot["Group"].unique())
+    # Choose a qualitative palette (like tab10, tab20, Set3)
+    # Use a palette large enough for the number of unique groups
+    palette = sns.color_palette("tab10", n_colors=len(unique_groups))
+    color_map = dict(zip(unique_groups, palette))
+
+    group_full_name_map = {
+        "alt": "Alternative",
+        "comp": "Computer",
+        "misc": "Miscellaneous",
+        "rec": "Recreation",
+        "sci": "Science",
+        "soc": "Social",
+        "talk": "Talk",
+    }
+
+    # 3. Create the plot
+    plt.figure(figsize=(15, 8))  # Adjust figure size as needed
+
+    # Use seaborn barplot, map 'Group' to hue to control color via the palette
+    # 'dodge=False' prevents bars from shifting position based on hue
+    # 'legend=False' hides the default hue legend, we'll create a custom one
+    sns.barplot(
+        x="Category",
+        y="Count",
+        data=df_plot,
+        hue="Group",  # Assign colors based on this column
+        palette=color_map,  # Use the map we created
+        dodge=False,  # Keep bars aligned on the x-axis
+        legend=False,  # Disable automatic legend for hue
+    )
+
+    # 4. Customize the plot
+    plt.xlabel("Category", fontsize=12)
+    plt.ylabel("Count", fontsize=12)
+    plt.title("Distribution of Categories in Sampled Dataset (Colored by Top-Level Group)", fontsize=14)
+    plt.xticks(rotation=90, ha="center")  # Rotate labels for better readability
+
+    legend_handles = [Patch(color=color_map[group], label=group_full_name_map.get(group, group)) for group in unique_groups]
+    plt.legend(
+        handles=legend_handles, title="Category Group", bbox_to_anchor=(1.02, 1), loc="upper left"  # Position legend outside plot area
+    )
+
+    plt.tight_layout(rect=(0, 0, 0.9, 1))
+    plt.show()
 
     return sampled_data, sampled_labels
 

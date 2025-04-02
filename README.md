@@ -25,8 +25,10 @@ The text classifier
 
 ![Viol](./.readme/viol.png)
 
-## Machine learning
+## Sampled dataset &mdash; category distribution
 
-### SVM
+![Category distribution in sampled dataset](./.readme/distribution_of_categories_in_sampled_dataset.png)
 
-![Confusion matrix svm](./.readme/confusion_matrix_svm.png)
+## Combined confusion matrix over 10 folds &mdash; SVM
+
+![Confusion matrix svm](./.readme/combined_confusion_matrix_across_10_folds.png)
