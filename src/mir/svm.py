@@ -2,6 +2,7 @@
 #
 # Partially used guide:
 # https://codemax.app/snippet/introduction-to-text-classification-with-support-vector-machines-svm/
+from typing import Dict, Union
 from sampler import load_20newsdata, clean_texts, sample_data
 from typing import Any
 import os
@@ -9,10 +10,8 @@ import nltk
 from mpmath import mp
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
-import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
@@ -107,6 +106,21 @@ if __name__ == "__main__":
     f1s = np.zeros((k, labels_len))
     supports = np.zeros((k, labels_len))
 
+    # Define a type alias for clarity (optional but helpful)
+    # This represents the structure of your 'records' dictionary plus the other string values
+    SvmIterationData = Dict[str, Union[str, float, int, dict]]  # Adjust types as needed within records
+    SvmModelData = Dict[str, Union[str, SvmIterationData]]  # Allows model_id (str) or iteration records (dict)
+
+    # Initialize with type hints telling Pyright what to expect
+    data_to_add: Dict[str, Dict[str, SvmModelData]] = {
+        "models": {
+            "svm": {
+                "model_id": "svm"
+                # Classification reports (SvmIterationData) will be added here
+            }
+        }
+    }
+
     print("Starting cross-validation")
     print("This may take a very long time (depending on the amount of data)...")
     for i in tqdm(iterable=range(k), desc="Cross-validation", total=k, unit="folds"):
@@ -118,8 +132,32 @@ if __name__ == "__main__":
         # between the training and test sets
         # This is important for very small datasets!
         X_train, X_test, y_train, y_test = train_test_split(
-            cleaned_sampled_data, sampled_labels, test_size=0.2, random_state=seed, stratify=sampled_labels
+            cleaned_sampled_data, sampled_labels, test_size=0.05, random_state=seed, stratify=sampled_labels
         )
+
+        # NOTE:
+        # Commented this out so that the database is not filled with duplicates
+        # if i == 0:
+        #     # Add the test data to the database
+        #     data_col = get_collection(db="data", collection="v1")
+        #     # --- Create the formatted list of articles ---
+        #     # Use zip to pair articles from X_test with their labels from y_test
+        #     formatted_articles = [
+        #         {
+        #             "user_input": article,  # The text from X_test
+        #             "reference": label,  # The corresponding label from y_test
+        #             "agent_response": "",  # The required empty string
+        #         }
+        #         for article, label in zip(X_test, y_test)  # Iterate through pairs
+        #     ]
+        #     db.add_one(
+        #         col=data_col,
+        #         data={
+        #             "seed": seed,
+        #             "categories:": used_labels.tolist(),
+        #             "articles": formatted_articles,
+        #         },
+        #     )
 
         clf_svm = CLF_svm()
         clf_svm.fit(X_train, y_train)
@@ -129,115 +167,45 @@ if __name__ == "__main__":
         accuracies[i] = accuracy_score(y_true=y_test, y_pred=y_pred)
         clf_reports[i] = classification_report(y_true=y_test, y_pred=y_pred)
         precisions[i], recalls[i], f1s[i], supports[i] = precision_recall_fscore_support(
-            y_true=y_test, y_pred=y_pred, average=None, labels=used_labels
+            y_true=y_test, y_pred=y_pred, average=None, labels=used_labels, zero_division=0
         )
 
         # Setting labels here ensures that the confusion matrix is always the same
         # dimensions across all iterations
         conf_matrices[i] = confusion_matrix(y_true=y_test, y_pred=y_pred, labels=used_labels)
 
-    # Final evaluation
-    # Aggregated classification report
-    used_labels_as_str = [str(label) for label in used_labels]
-    aggregated_precision = np.mean(precisions, axis=0)
-    aggregated_recall = np.mean(recalls, axis=0)
-    aggregated_f1 = np.mean(f1s, axis=0)
-    aggregated_support = np.sum(supports, axis=0)
-    report_df = pd.DataFrame(
-        {
-            "Label": used_labels_as_str,
-            "precision": aggregated_precision,
-            "recall": aggregated_recall,
-            "f1-score": aggregated_f1,
-            "support": aggregated_support,
+        # Add results to database
+        records = (
+            pd.DataFrame(
+                {
+                    "Label": used_labels,
+                    "precision": precisions[i],
+                    "recall": recalls[i],
+                    "f1-score": f1s[i],
+                    "support": supports[i],
+                }
+            )
+            .set_index("Label")
+            .to_dict("index")
+        )
+        records["seed"] = seed
+        records["accuracy"] = accuracies[i]
+        records["macro_avg"] = {
+            "precision": np.mean(precisions[i]),
+            "recall": np.mean(recalls[i]),
+            "f1-score": np.mean(f1s[i]),
+            "support": np.sum(supports[i]),
         }
-    )
-    print("\nAggregated Classification Report")
-    print(report_df)
-
-    # Compute average accuracy across folds
-    average_accuracy = np.mean(accuracies)
-    print("\nAccuracy")
-    print(average_accuracy)
-
-    # Set score types and the total support of aggregate
-    score_types = ["Precision", "Recall", "F1", "Support"]
-    total_support = np.sum(aggregated_support)
-    # Compute macro averages
-    macro_avg = {
-        "precision": np.mean(aggregated_precision),
-        "recall": np.mean(aggregated_recall),
-        "f1-score": np.mean(aggregated_f1),
-        "support": total_support,
-    }
-    macro_avg_df = pd.DataFrame(
-        {
-            "Label": ["Macro Avg"],
-            "precision": [macro_avg["precision"]],
-            "recall": [macro_avg["recall"]],
-            "f1-score": [macro_avg["f1-score"]],
-            "support": [macro_avg["support"]],
+        records["weighted_avg"] = {
+            "precision": np.sum(precisions[i] * supports[i]) / np.sum(supports[i]),
+            "recall": np.sum(recalls[i] * supports[i]) / np.sum(supports[i]),
+            "f1-score": np.sum(f1s[i] * supports[i]) / np.sum(supports[i]),
+            "support": np.sum(supports[i]),
         }
-    )
-    print("\nMacro Averages")
-    print(macro_avg_df)
+        # Add the 'records' for the current iteration to the 'svm' dictionary
+        # using a unique key for the iteration
+        data_to_add["models"]["svm"][f"classification_report_iter_{i}"] = records
 
-    # Compute weighted averages
-    weighted_avg = {
-        "precision": np.sum(aggregated_precision * aggregated_support) / total_support,
-        "recall": np.sum(aggregated_recall * aggregated_support) / total_support,
-        "f1-score": np.sum(aggregated_f1 * aggregated_support) / total_support,
-        "support": total_support,
-    }
-    weighted_avg_df = pd.DataFrame(
-        {
-            "Label": ["Weighted Avg"],
-            "precision": [weighted_avg["precision"]],
-            "recall": [weighted_avg["recall"]],
-            "f1-score": [weighted_avg["f1-score"]],
-            "support": [weighted_avg["support"]],
-        }
-    )
-    print("\nWeighted Averages")
-    print(weighted_avg_df)
-
-    # Make the dataframes ready for the database
-    records = report_df.set_index("Label").to_dict("index")
-    records["accuracy"] = average_accuracy
-    records["macro_avg"] = macro_avg
-    records["weighted_avg"] = weighted_avg
-
-    # Add results to database
-    print("\nAdding results to database")
+    # Add the data to the database
     res_col = get_collection(db="results", collection="v1")
-    add_one(col=res_col, data={"models": {"svm": {"model_id": "svm", "classification_report": records}}})
-
-    # Combine all confusion matrices
-    combined_conf_matrix = np.sum(np.array(conf_matrices), axis=0)
-
-    # Plot confusion matrix
-    plt.figure(figsize=(13, 11))
-    sns.heatmap(
-        combined_conf_matrix,
-        annot=True,  # Show numbers in cells
-        annot_kws={"size": 7},  # Apply annotation keywords if defined above
-        fmt="d",  # Format numbers as integers
-        cmap="Blues",  # Color scheme
-        xticklabels=used_labels_as_str,  # Use the full string labels
-        yticklabels=used_labels_as_str,
-        linewidths=0.5,  # Optional: Add thin lines between cells
-        linecolor="lightgray",  # Optional: Color for cell lines
-        cbar_kws={"shrink": 0.75},  # Optional: Shrink color bar
-    )
-    plt.title(f"Combined Confusion Matrix Across {k} Folds", fontsize=14)
-    plt.xlabel("Predicted Label", fontsize=10)
-    plt.ylabel("True Label", fontsize=10)
-
-    # Rotate X labels vertically, align text properly
-    plt.xticks(rotation=90, ha="center", fontsize=9)
-    # Keep Y labels horizontal, ensure vertical alignment is centered
-    plt.yticks(rotation=0, va="center", fontsize=9)
-
-    plt.tight_layout()
-
-    plt.show()
+    add_one(col=res_col, data=data_to_add)
