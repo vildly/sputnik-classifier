@@ -125,10 +125,9 @@ async def main():
 
     # Specify the model keys you want to process
     model_keys = [
-        # "google/gemini-2.0-flash-001",
-        # "gpt-4o",
-        "mistralai/ministral-8b"
+        "google/gemini-flash-1.5",
     ]
+    # openrouter_models=["google/gemini-2.0-flash-lite-001","google/gemini-flash-1.5","openai/gpt-4.1-nano","cohere/command-r-08-2024"],
     print(f"Starting processing for models: {model_keys}")
     await process_and_store_results(model_keys)
 

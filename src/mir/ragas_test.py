@@ -14,7 +14,7 @@ load_dotenv()
 logger = get_logger()
 
 # Initialize LLM and Embeddings wrappers for evaluation
-evaluator_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o"))
+evaluator_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-3.5-turbo-16k"))
 evaluator_embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings())
 
 

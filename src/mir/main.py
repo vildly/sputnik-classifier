@@ -30,10 +30,10 @@ class Config:
 
 
 config = Config(
-    data_id="67dd621c95dba9ac576eb821",
+    data_id="67ffc6f33dd1ad2883169807",
     prompt="categorize the data into the categories provided",
-    openrouter_models=["google/gemini-2.0-flash-001", "mistralai/ministral-8b"],
-    openai_models=["gpt-4o"],
+    openrouter_models=["google/gemini-2.0-flash-lite-001","google/gemini-flash-1.5","openai/gpt-4.1-nano","cohere/command-r-08-2024"],
+    openai_models=[],
 )
 
 
@@ -166,7 +166,7 @@ async def main(batch_len: int = 10000):
 
 
 if __name__ == "__main__":
-    sleep_time = 20
+    sleep_time = 0
     models = ", ".join(config.openrouter_models + config.openai_models)
     logger.warning(f"Starting job in {sleep_time} seconds...")
     logger.warning(f"Using models: {models}.")
